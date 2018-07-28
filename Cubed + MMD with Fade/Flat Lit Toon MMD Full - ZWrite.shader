@@ -1,4 +1,4 @@
-Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
+Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 {
 	Properties
 	{
@@ -14,6 +14,7 @@ Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
 		_EmissionMap("Emission Map", 2D) = "white" {}
+		_SphereMap("Sphere Map", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		_BumpMap("BumpMap", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
@@ -30,6 +31,7 @@ Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
 	{
 		Tags
 		{
+			"Queue" = "Transparent"
 			"RenderType" = "Transparent"
 		}
 
@@ -78,17 +80,17 @@ Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
+				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= _SphereAddIntensity;
+				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
-				sphereMul.rgb *= _SphereMulIntensity;
 
 				#if COLORED_OUTLINE
 				if(i.is_outline) 
 				{
 					baseColor.rgb = i.col.rgb; 
-					sphereAdd = 0;
-					sphereMul = 1;
+					//sphereAdd = 0;
+					//sphereMul = 1;
 				}
 				#endif
 
@@ -165,8 +167,9 @@ Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
+				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= _SphereAddIntensity;
+				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 
@@ -216,5 +219,5 @@ Shader "CubedParadox/Flat Lit Toon MMD Full - ZWrite"
 	
 	
 	Fallback "Transparent/VertexLit"
-	CustomEditor "FlatLitToonInspectorMMDFull"
+	//CustomEditor "FlatLitToonInspectorMMDFull"
 }
