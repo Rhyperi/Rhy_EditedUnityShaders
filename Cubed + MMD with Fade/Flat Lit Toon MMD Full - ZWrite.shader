@@ -79,6 +79,14 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
+				
+				// position of shaded pixel in view space 0.0 to 1.0 X and Y
+                float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
+
+                // vector perpendicular to both pixel normal and view vector
+                float3 viewCross = cross(viewDir, viewNormal);
+                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
@@ -166,6 +174,14 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
+				
+				// position of shaded pixel in view space 0.0 to 1.0 X and Y
+                float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
+
+                // vector perpendicular to both pixel normal and view vector
+                float3 viewCross = cross(viewDir, viewNormal);
+                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
