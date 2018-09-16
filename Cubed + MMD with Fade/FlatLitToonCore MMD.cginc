@@ -17,8 +17,10 @@ uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
 uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
+uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 
+uniform float _SpeedX; uniform float _SpeedY;
 uniform float4 _Color;
 uniform float _Shadow;
 uniform float _SphereAddIntensity;

@@ -14,7 +14,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
 		_EmissionMap("Emission Map", 2D) = "white" {}
-		_SphereMap("Sphere Map", 2D) = "white" {}
+		_EmissionMask("Emission Mask", 2D) = "white" {}
+		_SpeedX("Emission X speed", Float) = 1.0
+		_SpeedY("Emission Y speed", Float) = 1.0
+		_SphereMap("Sphere Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		_BumpMap("BumpMap", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
@@ -58,8 +61,15 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
 
+			float2 emissionUV;
+			float2 emissionMovement;
+			
 			float4 frag(VertexOutput i) : COLOR
 			{
+				
+				emissionUV = i.uv0;
+				emissionUV.x += _Time.x * _SpeedX;
+				emissionUV.y += _Time.x * _SpeedY;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
@@ -72,7 +82,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
+				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
 				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
+				emissive.rgb *= emissionMask_var.rgb;
+				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
 				baseColor *= float4(i.col.rgb, 1);
