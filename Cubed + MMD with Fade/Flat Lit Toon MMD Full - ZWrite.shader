@@ -66,7 +66,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 			
 			float4 frag(VertexOutput i) : COLOR
 			{
-				
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
