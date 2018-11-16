@@ -34,8 +34,8 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 	{
 		Tags
 		{
-			"Queue" = "Transparent"
-			"RenderType" = "Transparent"
+			"Queue" = "Geometry"
+			"RenderType" = "Cutout"
 		}
 
 		Pass
@@ -65,7 +65,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 			float2 emissionMovement;
 			
 			float4 frag(VertexOutput i) : COLOR
-			{
+			{			
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
@@ -97,7 +97,15 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 
                 // vector perpendicular to both pixel normal and view vector
                 float3 viewCross = cross(viewDir, viewNormal);
+				/*
                 viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+				
+				float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
+				float sinX = sin(cameraRoll);
+				float cosX = cos(cameraRoll);
+				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
+				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+				*/
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
@@ -167,8 +175,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
-			float4 frag(VertexOutput i) : COLOR
-			{
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
+			{			
+				float faceSign = ( facing >= 0 ? 1 : -1 );
+				
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
@@ -193,6 +203,12 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
                 // vector perpendicular to both pixel normal and view vector
                 float3 viewCross = cross(viewDir, viewNormal);
                 viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+				
+				float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
+				float sinX = sin(cameraRoll);
+				float cosX = cos(cameraRoll);
+				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
+				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
