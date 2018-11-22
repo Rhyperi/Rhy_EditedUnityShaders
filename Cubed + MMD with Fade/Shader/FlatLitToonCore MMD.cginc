@@ -67,6 +67,7 @@ v2g vert(appdata_full v) {
 	return o;
 }
 
+
 struct VertexOutput
 {
 	float4 pos : SV_POSITION;
@@ -77,6 +78,23 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 col : COLOR;
+	bool is_outline : IS_OUTLINE;
+	SHADOW_COORDS(6)
+	UNITY_FOG_COORDS(7)
+};
+
+
+struct VertexOutput 
+{
+    float4 pos : SV_POSITION;
+    float2 uv0 : TEXCOORD0;
+    float4 posWorld : TEXCOORD1;
+    float3 normalDir : TEXCOORD2;
+    float3 tangentDir : TEXCOORD3;
+    float3 bitangentDir : TEXCOORD4;
+	float2 uv1 : TEXCOORD5;
+	float4 col : COLOR;
+    LIGHTING_COORDS(5,6)
 	bool is_outline : IS_OUTLINE;
 	SHADOW_COORDS(6)
 	UNITY_FOG_COORDS(7)

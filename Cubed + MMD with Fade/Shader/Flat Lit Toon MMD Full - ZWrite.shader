@@ -263,5 +263,5 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 	
 	
 	Fallback "Transparent/VertexLit"
-	//CustomEditor "FlatLitToonInspectorMMDFull"
+	CustomEditor "RhyFlatLitMMDEditor"
 }
