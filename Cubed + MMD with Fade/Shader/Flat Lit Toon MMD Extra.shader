@@ -1,4 +1,4 @@
-Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
+Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 {
 	Properties
 	{
@@ -58,14 +58,15 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 			#pragma geometry geom
 			#pragma fragment frag
 
-			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
 
 			float2 emissionUV;
 			float2 emissionMovement;
 			
-			float4 frag(VertexOutput i) : COLOR
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
 			{			
+				float faceSign = ( facing >= 0 ? 1 : -1 );
+			
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
@@ -97,7 +98,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 
                 // vector perpendicular to both pixel normal and view vector
                 float3 viewCross = cross(viewDir, viewNormal);
-				/*
                 viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
 				
 				float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
@@ -105,7 +105,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - ZWrite"
 				float cosX = cos(cameraRoll);
 				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
 				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
-				*/
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));

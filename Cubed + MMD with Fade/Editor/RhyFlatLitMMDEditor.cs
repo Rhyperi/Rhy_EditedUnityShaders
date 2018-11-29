@@ -1,8 +1,7 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
-using System.Collections.Generic;
-using System.Linq;
-using System;
+using UnityEngine.Rendering;
 
 public class RhyFlatLitMMDEditor : ShaderGUI
 {

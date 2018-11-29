@@ -11,20 +11,11 @@
 
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
-uniform sampler2D _SphereAddTex; uniform float4 _SphereAddTex_ST;
-uniform sampler2D _SphereMap; uniform float4 _SphereMap_ST;
-uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
-uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
-uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
-uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 
-uniform float _SpeedX; uniform float _SpeedY;
 uniform float4 _Color;
 uniform float _Shadow;
-uniform float _SphereAddIntensity;
-uniform float _SphereMulIntensity;
 uniform float _Cutoff;
 uniform float4 _EmissionColor;
 uniform float _outline_width;
@@ -67,7 +58,6 @@ v2g vert(appdata_full v) {
 	return o;
 }
 
-
 struct VertexOutput
 {
 	float4 pos : SV_POSITION;
@@ -77,6 +67,7 @@ struct VertexOutput
 	float3 normalDir : TEXCOORD3;
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
+	float4 screenPos : TEXCOORD6;
 	float4 col : COLOR;
 	bool is_outline : IS_OUTLINE;
 	SHADOW_COORDS(6)
@@ -100,6 +91,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.bitangentDir = IN[i].bitangentDir;
 		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
 		o.is_outline = true;
+		o.screenPos = o.pos;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
@@ -129,6 +121,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.bitangentDir = IN[ii].bitangentDir;
 		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
 		o.is_outline = false;
+		o.screenPos = o.pos;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
