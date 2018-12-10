@@ -25,12 +25,12 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty mainTexture;
     MaterialProperty color;
     MaterialProperty colorMask;
+    MaterialProperty colIntensity;
     MaterialProperty sphereAddTexture;
     MaterialProperty sphereAddIntensity;
     MaterialProperty sphereAddMask;
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
-    //MaterialProperty shadow;
     MaterialProperty toonTex;
     MaterialProperty outlineMode;
     MaterialProperty outlineWidth;
@@ -38,6 +38,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
     MaterialProperty emissionMask;
+    MaterialProperty emissionIntensity;
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty normalMap;
@@ -51,12 +52,12 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             mainTexture = FindProperty("_MainTex", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
+            colIntensity = FindProperty("_ColorIntensity", props);
             sphereAddTexture = FindProperty("_SphereAddTex", props);
             sphereAddIntensity = FindProperty("_SphereAddIntensity", props);
             sphereAddMask = FindProperty("_SphereMap", props);
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
-            //shadow = FindProperty("_Shadow", props);
             toonTex = FindProperty("_ToonTex", props);
             outlineMode = FindProperty("_OutlineMode", props);
             outlineWidth = FindProperty("_outline_width", props);
@@ -64,6 +65,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
             emissionMask = FindProperty("_EmissionMask", props);
+            emissionIntensity = FindProperty("_EmissionIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
@@ -100,6 +102,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 EditorGUI.indentLevel += 2;
                 if((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting (G)"), colorMask);
                 EditorGUI.indentLevel -= 2;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Texture"), sphereAddTexture);
@@ -112,6 +115,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map (RGB)"), normalMap);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission (RGB)"), emissionMap, emissionColor);
+                    materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);

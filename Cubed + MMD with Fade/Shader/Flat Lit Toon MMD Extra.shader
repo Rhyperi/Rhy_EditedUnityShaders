@@ -5,6 +5,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 		_MainTex("MainTex", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_ColorMask("ColorMask", 2D) = "black" {}
+		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
@@ -15,6 +16,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
 		_EmissionMap("Emission Map", 2D) = "white" {}
 		_EmissionMask("Emission Mask", 2D) = "white" {}
+		_EmissionIntensity("Emission Intensity", Range(0, 20)) = 1.0
 		_SpeedX("Emission X speed", Float) = 1.0
 		_SpeedY("Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
@@ -34,22 +36,19 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 	{
 		Tags
 		{
-			"Queue" = "Geometry"
-			"RenderType" = "Cutout"
+			"RenderType" = "Opaque"
 		}
 
 		Pass
 		{
-
 			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
-			Blend [_SrcBlend] [_DstBlend]
+			Blend SrcAlpha OneMinusSrcAlpha
 			ZWrite On
 			LOD 200
-			Cull Back
-			
-			
+			Cull Off
+						
 			CGPROGRAM
 			#include "FlatLitToonCore MMD.cginc"
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
@@ -59,6 +58,8 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 			#pragma fragment frag
 
 			#pragma multi_compile_fog
+			#pragma target 4.0
+			#pragma only_renderers d3d11 glcore gles
 
 			float2 emissionUV;
 			float2 emissionMovement;
@@ -85,10 +86,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
 				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
 				emissive.rgb *= emissionMask_var.rgb;
+				emissive.rgb *= _EmissionIntensity;
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-				baseColor *= float4(i.col.rgb, 1);
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
@@ -120,10 +121,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 					//sphereMul = 1;
 				}
 				#endif
-
-				#if defined(_ALPHATEST_ON)
-        		clip (baseColor.a - _Cutoff);
-    			#endif
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
 				#ifdef LIGHTMAP_ON
@@ -148,9 +145,9 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
 
 				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = emissive + (baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor));
-
-				fixed4 finalRGBA = fixed4(finalColor * lightmap, baseColor.a);
+				float3 finalColor = emissive + (((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor)));
+				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
+				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -161,7 +158,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 		{
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
-			Blend [_SrcBlend] One
+			Blend One One
 
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
@@ -191,7 +188,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-				baseColor *= float4(i.col.rgb, 1);
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
@@ -224,16 +220,12 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				}
 				#endif
 
-				#if defined(_ALPHATEST_ON)
-        		clip (baseColor.a - _Cutoff);
-    			#endif
-
     			float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)*attenuation;
 				float3 directContribution = floor(saturate(lightContribution) * 2.0);
 
 				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = (baseColor * sphereMul + sphereAdd) * lerp(0, _LightColor0.rgb, saturate(directContribution * toonTexColor + attenuation));
-				fixed4 finalRGBA = fixed4(finalColor,1) * i.col;
+				float3 finalColor = (_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(0, _LightColor0.rgb, saturate(directContribution * toonTexColor + attenuation));
+				fixed4 finalRGBA = fixed4(finalColor, 0) * i.col;
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
