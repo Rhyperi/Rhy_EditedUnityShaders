@@ -118,13 +118,12 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                     materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);
+                    materialEditor.TextureScaleOffsetProperty(emissionMask);
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 EditorGUI.BeginChangeCheck();
-                materialEditor.TextureScaleOffsetProperty(mainTexture);
-                if (EditorGUI.EndChangeCheck())
-                    emissionMap.textureScaleAndOffset = mainTexture.textureScaleAndOffset;
+                
                 
                 EditorGUILayout.Space();
                 //materialEditor.ShaderProperty(shadow, "Shadow");

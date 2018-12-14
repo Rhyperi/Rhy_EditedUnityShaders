@@ -101,6 +101,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
                 float3 viewCross = cross(viewDir, viewNormal);
                 viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
 				
+				
 				float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
 				float sinX = sin(cameraRoll);
 				float cosX = cos(cameraRoll);
@@ -122,6 +123,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				}
 				#endif
 				
+				#if defined(_ALPHATEST_ON)
+        		clip (baseColor.a - _Cutoff);
+    			#endif
+				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
 				#ifdef LIGHTMAP_ON
 				lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
@@ -132,9 +137,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
 				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
-
-				normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); 
-
 				float grayscaleDirectLighting = dot(lightDirection, normalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(normalDirection);
 
 				float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
@@ -143,10 +145,19 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-
 				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = emissive + (((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor)));
-				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
+				float3 finalColor = emissive + (((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor.rgb)));
+				
+				if(_WorldSpaceLightPos0.x == 0)
+					if(_WorldSpaceLightPos0.y == 0)
+						if(_WorldSpaceLightPos0.z == 0)
+							finalColor = emissive + (((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution)));
+				
+				fixed4 finalRGBA = fixed4(finalColor * lightmap , _MainTex_var.a);			
+				
+				#if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
+                    UNITY_OPAQUE_ALPHA(finalRGBA.a);
+                #endif
 				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
@@ -167,14 +178,12 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
-
-			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
-			{			
+			{	
 				float faceSign = ( facing >= 0 ? 1 : -1 );
-				
+			
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
@@ -188,44 +197,31 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-
-				// MMD Spheres
-				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
-				
-				// position of shaded pixel in view space 0.0 to 1.0 X and Y
-                float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
-
-                // vector perpendicular to both pixel normal and view vector
-                float3 viewCross = cross(viewDir, viewNormal);
-                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
-				
-				float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
-				float sinX = sin(cameraRoll);
-				float cosX = cos(cameraRoll);
-				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
-				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
-				
-				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
-				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
-				sphereMul.rgb *= _SphereMulIntensity;
+				baseColor *= float4(i.col.rgb, 1);
 
 				#if COLORED_OUTLINE
 				if(i.is_outline) {
 					baseColor.rgb = i.col.rgb;
-					sphereAdd = 0;
-					sphereMul = 1;
 				}
 				#endif
 
-    			float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)*attenuation;
-				float3 directContribution = floor(saturate(lightContribution) * 2.0);
+				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
 
+				#if defined(_ALPHATEST_ON)
+        		clip (baseColor.a - _Cutoff);
+    			#endif
+				
+				float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)*attenuation;
+				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(lightContribution) * 2.0));
+				
 				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = (_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(0, _LightColor0.rgb, saturate(directContribution * toonTexColor + attenuation));
-				fixed4 finalRGBA = fixed4(finalColor, 0) * i.col;
+				float3 finalColor = (_ColorIntensity * baseColor) * lerp(0, _LightColor0.rgb, saturate(directContribution + toonTexColor.rgb * attenuation));
+				fixed4 finalRGBA = fixed4(finalColor,1) * i.col;
+				
+                #if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
+                    UNITY_OPAQUE_ALPHA(finalRGBA.a);
+                #endif
+
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -244,6 +240,10 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 			#include "FlatLitToonShadows.cginc"
 			
 			#pragma multi_compile_shadowcaster
+			#pragma fragmentoption ARB_precision_hint_fastest
+
+			#pragma only_renderers d3d11 glcore gles
+			#pragma target 4.0
 
 			#pragma vertex vertShadowCaster
 			#pragma fragment fragShadowCaster
