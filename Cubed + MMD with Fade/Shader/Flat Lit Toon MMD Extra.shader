@@ -1,4 +1,4 @@
-Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
+Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 {
 	Properties
 	{
@@ -10,6 +10,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
 		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_DefaultLightDir("Default Light Direction", Vector) = (1,2,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
@@ -79,6 +80,8 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
+				if((_WorldSpaceLightPos0.x == 0) && (_WorldSpaceLightPos0.y == 0) && (_WorldSpaceLightPos0.z == 0))
+					lightDirection = normalize(_DefaultLightDir);
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
@@ -112,6 +115,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
 				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
+				sphereMul.rgb *= _SphereMulIntensity;
 
 				#if COLORED_OUTLINE
 				if(i.is_outline) 
@@ -187,9 +191,6 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Extra"
 				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
-
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));

@@ -1,4 +1,4 @@
-Shader "Rhy Frankensteins/Holo + Animated Texture"
+Shader "Rhy Custom Shaders/Holo + Animated Texture"
 {
 	Properties
 	{

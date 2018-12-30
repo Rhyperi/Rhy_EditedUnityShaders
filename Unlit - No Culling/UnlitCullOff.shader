@@ -1,4 +1,4 @@
-Shader "Rhy Frankensteins/Unlit"
+Shader "Rhy Custom Shaders/Unlit"
 {
     Properties
     {

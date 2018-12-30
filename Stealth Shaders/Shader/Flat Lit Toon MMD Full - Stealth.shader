@@ -1,4 +1,4 @@
-Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - Stealth"
+Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 {
 	Properties
 	{
@@ -150,8 +150,7 @@ Shader "Rhy Frankensteins/Flat Lit Toon MMD Full - Stealth"
                 float node_1162 = (node_3485+node_9778+node_9302);
                 float node_2121 = saturate(node_1162);
                 float node_8264 = (lerp( 0.0, (pow(1.0-max(0,dot(normalDirection, viewDirection)),5.0)*3.0*(1.0 - node_2121)), _VisibleEffect )*_VisibleEffectIntensity);
-               
-
+            
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
 				float3 emissive = (_EmissionMap_var.rgb*_EmissiveColor.rgb) + ((saturate((_PatternColor.rgb*saturate((1.0 - (node_1333*(node_1333-(0.0+(10.0*node_1162))))))))*_EmissiveIntensity)+(_PatternColor.rgb*node_8264));

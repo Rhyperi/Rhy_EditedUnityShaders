@@ -32,6 +32,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
+    MaterialProperty defaultLightDir;
     MaterialProperty outlineMode;
     MaterialProperty outlineWidth;
     MaterialProperty outlineColor;
@@ -59,6 +60,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
+            defaultLightDir = FindProperty("_DefaultLightDir", props);
             outlineMode = FindProperty("_OutlineMode", props);
             outlineWidth = FindProperty("_outline_width", props);
             outlineColor = FindProperty("_outline_color", props);
@@ -83,6 +85,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 var bMode = (BlendMode)blendMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
+                GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
                 bMode = (BlendMode)EditorGUILayout.Popup("Rendering Mode", (int)bMode, Enum.GetNames(typeof(BlendMode)));
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -96,15 +99,15 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 }
 
                 EditorGUI.showMixedValue = false;
-
-
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture (RGB)"), mainTexture, color);
-                EditorGUI.indentLevel += 2;
-                if((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
+                EditorGUI.indentLevel += 2;          
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting (G)"), colorMask);
                 EditorGUI.indentLevel -= 2;
+                GUILayout.Space(6);
+                GUILayout.Label("-Sphere Textures-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Texture"), sphereAddTexture);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
@@ -112,7 +115,11 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                     materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
                     materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
+                GUILayout.Space(6);
+                GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
+                materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
+                GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map (RGB)"), normalMap);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission (RGB)"), emissionMap, emissionColor);
                     materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);

@@ -31,6 +31,7 @@ uniform float4 _EmissionColor;
 uniform float _EmissionIntensity;
 uniform float _outline_width;
 uniform float4 _outline_color;
+uniform float4 _DefaultLightDir; 
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
