@@ -22,7 +22,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 		_SpeedY("Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
-		_BumpMap("BumpMap", 2D) = "bump" {}
+		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 
 		// Blending state
@@ -74,15 +74,25 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
+				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
-				
+							
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				if(!any(_WorldSpaceLightPos0))
-					lightDirection = normalize(_DefaultLightDir.xyz);
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
+				if( light_Env != 1)
+				{
+						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
+					
+						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
+						{
+							lightDirection = normalize(_DefaultLightDir.xyz);
+						}
+				}
+				
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
@@ -148,7 +158,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
-				float3 directContribution = saturate(.9 + floor(saturate(remappedLight) * 2.5));
+				float3 directContribution = saturate(.92 + floor(saturate(remappedLight) * 2.5));
 				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
@@ -195,14 +205,22 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 	
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				if(!any(_WorldSpaceLightPos0))
-					lightDirection = normalize(_DefaultLightDir);
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
+				if( light_Env != 1)
+				{
+						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
+					
+						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
+						{
+							lightDirection = normalize(_DefaultLightDir.xyz);
+						}
+				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);

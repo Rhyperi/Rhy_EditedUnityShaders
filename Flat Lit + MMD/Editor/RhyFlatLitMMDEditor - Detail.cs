@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RhyFlatLitMMDEditor : ShaderGUI
+public class RhyFlatLitMMDEditorDetail : ShaderGUI
 {
 
     public enum OutlineMode
@@ -43,6 +43,8 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty normalMap;
+    MaterialProperty detailNormalMap;
+    MaterialProperty detailNormalMapMask;
     MaterialProperty alphaCutoff;
 
 
@@ -71,6 +73,8 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
+            detailNormalMap = FindProperty("_DetailMap", props);
+            detailNormalMapMask = FindProperty("_DetailMapMask", props);
             alphaCutoff = FindProperty("_Cutoff", props);
         }
         
@@ -102,7 +106,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
-                    materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -112,9 +116,9 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
                 EditorGUI.indentLevel -= 2;
-                    materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
+                materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
-                    materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
+                materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
                 GUILayout.Space(6);
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
@@ -122,10 +126,15 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
                 materialEditor.TextureScaleOffsetProperty(normalMap);
+                EditorGUI.indentLevel += 2;
+                materialEditor.TexturePropertySingleLine(new GUIContent("Detail Normal Map", "Detail Normal Map"), detailNormalMap);
+                materialEditor.TextureScaleOffsetProperty(detailNormalMap);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Detail Normal Map Mask", "Detail Normal Map Mask"), detailNormalMapMask);
+                EditorGUI.indentLevel -= 2;
                 GUILayout.Space(6);
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission"), emissionMap, emissionColor);
-                    materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
+                materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);
                     materialEditor.TextureScaleOffsetProperty(emissionMask);
