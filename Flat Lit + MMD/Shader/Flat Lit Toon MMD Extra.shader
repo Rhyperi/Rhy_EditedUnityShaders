@@ -158,7 +158,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
-				float3 directContribution = saturate(.92 + floor(saturate(remappedLight) * 2.5));
+				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
 				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
@@ -242,7 +242,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra"
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
 				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation)) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor, 0.0);
+				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
 
                 #if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
                     //UNITY_OPAQUE_ALPHA(finalRGBA.a);
