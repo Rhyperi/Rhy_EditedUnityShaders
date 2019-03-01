@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 {
 	Properties
 	{
@@ -7,10 +7,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 		_MainTex("MainTex", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_ColorMask("ColorMask", 2D) = "black" {}
+		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
 		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_EmissionMap("Emission Map", 2D) = "white" {}
 		_EmissionColor("Emission Color", Color) = (0,0,0,1)
@@ -73,7 +75,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
-
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
 
@@ -143,6 +144,17 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
                 float4 sceneColor = tex2D(Refraction, UnityStereoTransformScreenSpaceTex(sceneUVs));
 				
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
+				if( light_Env != 1)
+				{
+						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
+					
+						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
+						{
+							lightDirection = normalize(_DefaultLightDir.xyz);
+						}
+				}
+				
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 				
@@ -211,9 +223,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-
-				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = emissive + ((baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor)));
+				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				
+				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb);
 
 				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb * lightmap, finalColor * lightmap,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -372,9 +385,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-
-				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.5 + 0.5));
-				float3 finalColor = (baseColor * sphereMul + sphereAdd) * lerp(0, _LightColor0.rgb, saturate(directContribution * toonTexColor + attenuation));
+				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				
+				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
+				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation));
 				
 				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb, finalColor,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -402,4 +416,5 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Full - Stealth"
 		}
 	}
 	FallBack "Diffuse"
+	CustomEditor "RhyFlatLitMMDEditorStealth"
 }

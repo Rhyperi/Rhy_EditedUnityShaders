@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra - Transparent"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 {
 	Properties
 	{

@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra - Detail Normals Edition"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 {
 		Properties
 	{
@@ -26,6 +26,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra - Detail Normals Edition"
 		_DetailMap("Detail Normal Map", 2D) = "bump" {}
 		_DetailMapMask("Detail Normal Map Mask", 2D) = "white" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
+		_SpecularToggle("Specular Toggle", Float) = 1
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -123,15 +124,18 @@ Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra - Detail Normals Edition"
 				// position of shaded pixel in view space 0.0 to 1.0 X and Y
                 float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
 
-                // vector perpendicular to both pixel normal and view vector
-                float3 viewCross = cross(viewDir, viewNormal);
-                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
-				
-				//float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
-				//float sinX = sin(cameraRoll);
-				//float cosX = cos(cameraRoll);
-				//float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
-				//viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+				if(_SpecularToggle)
+				{
+					// vector perpendicular to both pixel normal and view vector
+					float3 viewCross = cross(viewDir, viewNormal);
+					viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+					
+					//float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
+					//float sinX = sin(cameraRoll);
+					//float cosX = cos(cameraRoll);
+					//float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
+					//viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+				}
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));

@@ -22,13 +22,14 @@ uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 
 uniform float _SpeedX; uniform float _SpeedY;
 uniform float4 _Color;
-uniform float _Shadow;
+uniform float _ColorIntensity;
 uniform float _SphereAddIntensity;
 uniform float _SphereMulIntensity;
 uniform float _Cutoff;
 uniform float4 _EmissionColor;
 uniform float _outline_width;
 uniform float4 _outline_color;
+uniform float4 _DefaultLightDir;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 

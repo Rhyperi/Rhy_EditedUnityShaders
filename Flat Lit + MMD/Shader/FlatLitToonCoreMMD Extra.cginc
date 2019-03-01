@@ -1,14 +1,17 @@
 #ifndef FLAT_LIT_TOON_CORE_INCLUDED
 
+#include "UnityStandardBRDF.cginc"
+#include "UnityPBSLighting.cginc"
+#include "UnityShaderVariables.cginc"
 #include "UnityCG.cginc"
-#include "AutoLight.cginc"
 #include "Lighting.cginc"
+#include "AutoLight.cginc"
 
 #pragma multi_compile_fog
 #pragma only_renderers d3d9 d3d11 glcore gles 
-#pragma target 4.0
+#pragma target 3.0
 //#pragma addshadow
-
+		
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform sampler2D _SphereAddTex; uniform float4 _SphereAddTex_ST;
@@ -19,11 +22,11 @@ uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
+uniform sampler2D _NormalMask; uniform float4 _NormalMask_ST;
 
 uniform float _SpeedX; uniform float _SpeedY;
 uniform float4 _Color;
 uniform float _ColorIntensity;
-uniform float _Shadow;
 uniform float _SphereAddIntensity;
 uniform float _SphereMulIntensity;
 uniform float _Cutoff;
@@ -31,7 +34,8 @@ uniform float4 _EmissionColor;
 uniform float _EmissionIntensity;
 uniform float _outline_width;
 uniform float4 _outline_color;
-uniform float4 _DefaultLightDir; 
+uniform float4 _DefaultLightDir;
+uniform float _SpecularToggle;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 

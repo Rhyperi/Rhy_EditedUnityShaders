@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RhyFlatLitMMDEditorDetail : ShaderGUI
+public class RhyFlatLitMMDEditorStealth : ShaderGUI
 {
 
     public class MyToggleDrawer : MaterialPropertyDrawer
@@ -43,6 +43,7 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
         Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
         Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
     }
+  
 
     MaterialProperty blendMode;
     MaterialProperty mainTexture;
@@ -66,10 +67,21 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty normalMap;
-    MaterialProperty detailNormalMap;
-    MaterialProperty detailNormalMapMask;
     MaterialProperty alphaCutoff;
-    MaterialProperty specularToggle;
+    MaterialProperty stealth;
+    MaterialProperty stealthScale;
+    MaterialProperty pattern;
+    MaterialProperty patternColor;
+    MaterialProperty patternSpeed;
+    MaterialProperty patternScale;
+    MaterialProperty topBottom;
+    MaterialProperty visibleEffect;
+    MaterialProperty visibleEffectIntensity;
+    MaterialProperty minVisibility;
+    MaterialProperty refreactionIntensity;
+    MaterialProperty triplanarUV2;
+    MaterialProperty patternTriplanarUV2;
+    MaterialProperty refractionAndPattern;
 
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -93,14 +105,25 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
             emissionMask = FindProperty("_EmissionMask", props);
-            emissionIntensity = FindProperty("_EmissionIntensity", props);
+            emissionIntensity = FindProperty("_EmissiveIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
-            detailNormalMap = FindProperty("_DetailMap", props);
-            detailNormalMapMask = FindProperty("_DetailMapMask", props);
             alphaCutoff = FindProperty("_Cutoff", props);
-            specularToggle = FindProperty("_SpecularToggle", props);
+            stealth = FindProperty("_Stealth", props);
+            stealthScale = FindProperty("_StealthScale", props);
+            pattern = FindProperty("_Pattern", props);
+            patternColor = FindProperty("_PatternColor", props);
+            patternSpeed = FindProperty("_PatternSpeed", props);
+            patternScale = FindProperty("_PatternScale", props);
+            topBottom = FindProperty("_StartTopBottom", props);
+            visibleEffect = FindProperty("_VisibleEffect", props);
+            visibleEffectIntensity = FindProperty("_VisibleEffectIntensity", props);
+            minVisibility = FindProperty("_MinVisibility", props);
+            refreactionIntensity = FindProperty("_RefractionIntensity", props);
+            triplanarUV2 = FindProperty("_TriplanarUV2", props);
+            patternTriplanarUV2 = FindProperty("_PatternTriplanarUV1", props);
+            refractionAndPattern = FindProperty("_RefractionAndPattern", props);
         }
         
         Material material = materialEditor.target as Material;
@@ -127,42 +150,63 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
                 }
-
+      
                 EditorGUI.showMixedValue = false;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
-                materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                    materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(6);
+
+                GUILayout.Label("-Stealth Effects-", EditorStyles.boldLabel);
+                materialEditor.ShaderProperty(stealth, new GUIContent("Stealth Effect"), 0);
+                materialEditor.ShaderProperty(stealthScale, new GUIContent("Stealth Scale"), 1);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), triplanarUV2, "Use UV2 for Stealth?", materialEditor);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), refractionAndPattern, "Use Pattern?", materialEditor);
+                GUILayout.Space(3);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Stealth Pattern", "Stealth Pattern"), pattern, patternColor);
+                EditorGUI.indentLevel += 2;
+                materialEditor.ShaderProperty(patternSpeed, new GUIContent("Pattern Scroll Speed"), 0);
+                materialEditor.ShaderProperty(patternScale, new GUIContent("Pattern Scale"), 1);
+                materialEditor.ShaderProperty(refreactionIntensity, new GUIContent("Pattern Refreaction Intensity"), 0);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), patternTriplanarUV2, "Use UV2 for Pattern?", materialEditor);
+                EditorGUI.indentLevel -= 2;
+                GUILayout.Space(3);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), topBottom, "Scroll From Top?", materialEditor);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), visibleEffect, "Have Visible Effect?", materialEditor);
+                EditorGUI.indentLevel += 2;
+                materialEditor.ShaderProperty(visibleEffectIntensity, new GUIContent("Visible Effect Intensity"), 0);
+                materialEditor.ShaderProperty(minVisibility, new GUIContent("Minimum Visibility"), 0);
+                EditorGUI.indentLevel -= 2;
+                GUILayout.Space(3);
+
+                GUILayout.Space(6);
                 GUILayout.Label("-Sphere Textures-", EditorStyles.boldLabel);
-                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), specularToggle, "Realistic Specular?", materialEditor);
-                //ARE YOU HAPPY RAK?
                 materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Texture"), sphereAddTexture);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
                 EditorGUI.indentLevel -= 2;
-                materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
+                    materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
-                materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
+                    materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
                 GUILayout.Space(6);
+
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
                 materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
+                GUILayout.Space(6);
+
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
                 materialEditor.TextureScaleOffsetProperty(normalMap);
-                EditorGUI.indentLevel += 2;
-                materialEditor.TexturePropertySingleLine(new GUIContent("Detail Normal Map", "Detail Normal Map"), detailNormalMap);
-                materialEditor.TextureScaleOffsetProperty(detailNormalMap);
-                materialEditor.TexturePropertySingleLine(new GUIContent("Detail Normal Map Mask", "Detail Normal Map Mask"), detailNormalMapMask);
-                EditorGUI.indentLevel -= 2;
                 GUILayout.Space(6);
+
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission"), emissionMap, emissionColor);
-                materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
+                    materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);
                     materialEditor.TextureScaleOffsetProperty(emissionMask);

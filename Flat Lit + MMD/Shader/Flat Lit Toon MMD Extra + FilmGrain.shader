@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
+Shader "Rhy Custom Shaders/Flat Lit Toon MMD Extra + Film grain"
 {
 	Properties
 	{
@@ -10,7 +10,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
 		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
-		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,0)
+		_DefaultLightDir("Default Light Direction", Vector) = (1,2,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
@@ -22,8 +22,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		_SpeedY("Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
-		_BumpMap("Normal Map", 2D) = "bump" {}
+		_BumpMap("BumpMap", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
+		_grainTexture("Film Grain Texture", 2D) = "white" {}
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -37,7 +38,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 	{
 		Tags
 		{
-			"Queue"="Geometry"
 			"RenderType" = "Opaque"
 		}
 
@@ -74,25 +74,15 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
-				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
-							
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				if( light_Env != 1)
-				{
-						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-					
-						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-						{
-							lightDirection = normalize(_DefaultLightDir.xyz);
-						}
-				}
 				
+				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
+				if((_WorldSpaceLightPos0.x == 0) && (_WorldSpaceLightPos0.y == 0) && (_WorldSpaceLightPos0.z == 0))
+					lightDirection = normalize(_DefaultLightDir);
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
@@ -143,7 +133,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
 				#ifdef LIGHTMAP_ON
-					lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw);
+				lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 				#endif
 
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
@@ -158,11 +148,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
-				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
-				
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb);
+				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
+
+				float4 toonTexColor = tex2D(_ToonTex, float2(0.5, dot(lightDirection, normalDirection) * 0.49 + 0.5));
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, saturate(directContribution * toonTexColor.rgb))) ;
 				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
 				
 				#if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
@@ -183,8 +172,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			ZWrite Off
 			LOD 200
 			Cull Off
-			Fog { Color (0,0,0,0) } // in additive pass fog should be black
-			
 
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
@@ -205,22 +192,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-	
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				if( light_Env != 1)
-				{
-						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-					
-						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-						{
-							lightDirection = normalize(_DefaultLightDir.xyz);
-						}
-				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
@@ -236,12 +211,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 					//clip (baseColor.a - _Cutoff);
     			#endif
 
-				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
-				
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 directContribution = floor(saturate(lightContribution) * 2.5);
-				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation)) * toonTexColor.rgb;
+				float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)*attenuation;
+				float3 directContribution = floor(saturate(lightContribution) * 2.0);
+				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate(directContribution + attenuation));
 				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
 
                 #if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
@@ -259,8 +231,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
 
-			ZWrite On
-			ZTest LEqual
+			ZWrite On ZTest LEqual
 
 			CGPROGRAM
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
