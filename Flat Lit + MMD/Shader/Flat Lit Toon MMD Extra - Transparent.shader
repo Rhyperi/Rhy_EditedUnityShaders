@@ -54,8 +54,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 						
 			CGPROGRAM
 			#include "FlatLitToonCoreMMD Extra.cginc"
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -127,19 +125,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
-
-				#if COLORED_OUTLINE
-				if(i.is_outline) 
-				{
-					baseColor.rgb = i.col.rgb; 
-					//sphereAdd = 0;
-					//sphereMul = 1;
-				}
-				#endif
-				
-				#if defined(_ALPHATEST_ON)
-        		clip (baseColor.a - _Cutoff);
-    			#endif
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
 				#ifdef LIGHTMAP_ON
@@ -165,10 +150,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb) ;
 				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
 				
-				#if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
-                    UNITY_OPAQUE_ALPHA(finalRGBA.a);
-                #endif
-				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -187,8 +168,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 			
 
 			CGPROGRAM
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonCoreMMD Extra.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
@@ -226,15 +205,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
 				baseColor *= float4(i.col.rgb, 1);
 
-				#if COLORED_OUTLINE
-				if(i.is_outline) {
-					baseColor.rgb = i.col.rgb;
-				}
-				#endif
-
-				#if defined(_ALPHATEST_ON)
-					//clip (baseColor.a - _Cutoff);
-    			#endif
 
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
 				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
@@ -243,10 +213,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
 				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation)) * toonTexColor.rgb;
 				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
-
-                #if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
-                    //UNITY_OPAQUE_ALPHA(finalRGBA.a);
-                #endif
 
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;

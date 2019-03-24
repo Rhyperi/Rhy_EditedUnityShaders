@@ -88,37 +88,6 @@ struct VertexOutput
 void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 {
 	VertexOutput o;
-	#if !NO_OUTLINE
-	for (int i = 2; i >= 0; i--)
-	{
-		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
-		o.uv0 = IN[i].uv0;
-		o.uv1 = IN[i].uv1;
-		o.col = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1);
-		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
-		o.normalDir = UnityObjectToWorldNormal(IN[i].normal);
-		o.tangentDir = IN[i].tangentDir;
-		o.bitangentDir = IN[i].bitangentDir;
-		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
-		o.is_outline = true;
-		o.screenPos = o.pos;
-
-		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
-		o._ShadowCoord = IN[i]._ShadowCoord;
-		#endif
-
-		// Pass-through the fog coordinates if this pass has shadows.
-		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-		o.fogCoord = IN[i].fogCoord;
-		#endif
-
-		tristream.Append(o);
-	}
-
-	tristream.RestartStrip();
-	#endif
-
 	for (int ii = 0; ii < 3; ii++)
 	{
 		o.pos = UnityObjectToClipPos(IN[ii].vertex);

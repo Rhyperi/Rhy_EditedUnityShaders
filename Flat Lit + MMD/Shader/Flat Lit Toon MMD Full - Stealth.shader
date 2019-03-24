@@ -70,8 +70,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 
 			CGPROGRAM
 			#include "FlatLitToonCore MMD + Stealth.cginc"
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -242,8 +240,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 			Blend [_SrcBlend] One
 
 			CGPROGRAM
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonCore MMD + Stealth.cginc"
 			#pragma vertex vert
 			#pragma geometry geom

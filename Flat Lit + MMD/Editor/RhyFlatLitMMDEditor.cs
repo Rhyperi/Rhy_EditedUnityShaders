@@ -33,9 +33,6 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
     MaterialProperty defaultLightDir;
-    MaterialProperty outlineMode;
-    MaterialProperty outlineWidth;
-    MaterialProperty outlineColor;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
     MaterialProperty emissionMask;
@@ -61,9 +58,6 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
-            outlineMode = FindProperty("_OutlineMode", props);
-            outlineWidth = FindProperty("_outline_width", props);
-            outlineColor = FindProperty("_outline_color", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
             emissionMask = FindProperty("_EmissionMask", props);
@@ -135,35 +129,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 EditorGUI.BeginChangeCheck();
                 
                 
-                EditorGUILayout.Space();
-
-                var oMode = (OutlineMode)outlineMode.floatValue;
-
-                EditorGUI.BeginChangeCheck();
-                oMode = (OutlineMode)EditorGUILayout.Popup("Outline Mode", (int)oMode, Enum.GetNames(typeof(OutlineMode)));
-                
-                if (EditorGUI.EndChangeCheck())
-                {
-                    materialEditor.RegisterPropertyChangeUndo("Outline Mode");
-                    outlineMode.floatValue = (float)oMode;
-
-                    foreach (var obj in outlineMode.targets)
-                    {
-                        SetupMaterialWithOutlineMode((Material)obj, (OutlineMode)material.GetFloat("_OutlineMode"));
-                    }
-
-                }
-                switch (oMode)
-                {
-                    case OutlineMode.Tinted:
-                    case OutlineMode.Colored:
-                        materialEditor.ShaderProperty(outlineColor, "Color", 2);
-                        materialEditor.ShaderProperty(outlineWidth, new GUIContent("Width", "Outline Width in cm"), 2);
-                        break;
-                    case OutlineMode.None:
-                    default:
-                        break;
-                }                
+                EditorGUILayout.Space();      
             }
             EditorGUI.EndChangeCheck();
         }

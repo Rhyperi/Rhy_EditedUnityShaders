@@ -53,8 +53,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 						
 			CGPROGRAM
 			#include "FlatLitToonCoreMMD Extra.cginc"
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -187,8 +185,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			
 
 			CGPROGRAM
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonCoreMMD Extra.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
