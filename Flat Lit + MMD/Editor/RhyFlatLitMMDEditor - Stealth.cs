@@ -57,9 +57,6 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
     MaterialProperty defaultLightDir;
-    MaterialProperty outlineMode;
-    MaterialProperty outlineWidth;
-    MaterialProperty outlineColor;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
     MaterialProperty emissionMask;
@@ -99,9 +96,6 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
-            outlineMode = FindProperty("_OutlineMode", props);
-            outlineWidth = FindProperty("_outline_width", props);
-            outlineColor = FindProperty("_outline_color", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
             emissionMask = FindProperty("_EmissionMask", props);
@@ -216,35 +210,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 EditorGUI.BeginChangeCheck();
                 
                 
-                EditorGUILayout.Space();
-
-                var oMode = (OutlineMode)outlineMode.floatValue;
-
-                EditorGUI.BeginChangeCheck();
-                oMode = (OutlineMode)EditorGUILayout.Popup("Outline Mode", (int)oMode, Enum.GetNames(typeof(OutlineMode)));
-                
-                if (EditorGUI.EndChangeCheck())
-                {
-                    materialEditor.RegisterPropertyChangeUndo("Outline Mode");
-                    outlineMode.floatValue = (float)oMode;
-
-                    foreach (var obj in outlineMode.targets)
-                    {
-                        SetupMaterialWithOutlineMode((Material)obj, (OutlineMode)material.GetFloat("_OutlineMode"));
-                    }
-
-                }
-                switch (oMode)
-                {
-                    case OutlineMode.Tinted:
-                    case OutlineMode.Colored:
-                        materialEditor.ShaderProperty(outlineColor, "Color", 2);
-                        materialEditor.ShaderProperty(outlineWidth, new GUIContent("Width", "Outline Width in cm"), 2);
-                        break;
-                    case OutlineMode.None:
-                    default:
-                        break;
-                }                
+                EditorGUILayout.Space();           
             }
             EditorGUI.EndChangeCheck();
         }
@@ -294,30 +260,6 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 material.DisableKeyword("_ALPHABLEND_ON");
                 material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
-    }
-
-    public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
-    {
-        switch ((OutlineMode)material.GetFloat("_OutlineMode"))
-        {
-            case OutlineMode.None:
-                material.EnableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Tinted:
-                material.DisableKeyword("NO_OUTLINE");
-                material.EnableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Colored:
-                material.DisableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.EnableKeyword("COLORED_OUTLINE");
-                break;
-            default:
                 break;
         }
     }
