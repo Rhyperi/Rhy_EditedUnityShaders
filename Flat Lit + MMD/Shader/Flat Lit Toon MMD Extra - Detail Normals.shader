@@ -56,9 +56,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 						
 			CGPROGRAM
 			#include "FlatLitToonCoreMMD Extra.cginc"
-
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -85,12 +82,13 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
-				float3 rampNormals = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX((i.uv0 * _DetailMap_ST.xy + _DetailMap_ST.zw), _DetailMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
+				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
+				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(i.uv0, _DetailMap)));
 				float3 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
 				_DetailMap_var *= _DetailMapMask_var.rgb;
-				float3 normalDirection = normalize(mul((float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z)), tangentTransform));
+				float3 maskedDetailNormalDirection = normalize(mul(_DetailMap_var.rgb, tangentTransform)); // Perturbed normals
+				float3 maskedNormalDirection = normalize(mul((float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z)), tangentTransform));
 				
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 							
@@ -106,8 +104,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 						}
 				}
 				
-				float NdL = dot(normalDirection, float4(lightDirection.xyz, 0));
-				float remappedRamp = (NdL * 0.5 + 0.5);
+				float NdL = dot(maskedNormalDirection, float4(lightDirection.xyz, 0));
+				float remappedRamp = (NdL * 0.45 + 0.5);
 				
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -123,6 +121,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
+				float3 maskedViewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, maskedNormalDirection));
 				
 				// position of shaded pixel in view space 0.0 to 1.0 X and Y
                 float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
@@ -131,28 +130,37 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				{
 					// vector perpendicular to both pixel normal and view vector
 					float3 viewCross = cross(viewDir, viewNormal);
+					float3 maskedViewCross = cross(viewDir, maskedViewNormal);
 					viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+					maskedViewNormal = float3(-maskedViewCross.y, maskedViewCross.x, 0.0);
 					
 					float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
 					float sinX = sin(cameraRoll);
 					float cosX = cos(cameraRoll);
 					float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
 					viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+					maskedViewNormal.xy = mul(maskedViewCross, rotationMatrix*faceSign);
 				}
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
+				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity);
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
+				
+				float2 maskedSphereUV = maskedViewNormal.xy * 0.5 + 0.5;
+				float4 maskedSphereAdd = tex2D(_SphereAddTex, maskedSphereUV);
+				maskedSphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity);
+				float4 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
+				maskedSphereAdd.rgb *= _SphereMulIntensity;
 
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
 				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
 				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
-				float grayscaleDirectLighting = dot(lightDirection, normalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(normalDirection);
+				float grayscaleDirectLighting = dot(lightDirection, maskedNormalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(maskedNormalDirection);
 
 				float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
 				float remappedLight = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
@@ -162,10 +170,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
 				
 				float3 toonTexColorDetail = tex2D( _ToonTex, remappedRamp.xx).xyz;
-				float tempValue = 0.45 * dot(rampNormals, lightDirection) + 0.5;
+				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution)) * (toonTexColor.rgb * toonTexColorDetail.rgb);
+				float3 finalColor = emissive + (_ColorIntensity * baseColor * (sphereMul * maskedSphereMul) + (sphereAdd + maskedSphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * (toonTexColor.rgb * toonTexColorDetail.rgb);
 				fixed4 finalRGBA = fixed4(finalColor, _MainTex_var.a);			
 				
 				#if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
@@ -190,8 +198,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			
 
 			CGPROGRAM
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonCoreMMD Extra.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
@@ -264,7 +270,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			ZTest LEqual
 
 			CGPROGRAM
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonShadows.cginc"
 			
 			#pragma multi_compile_shadowcaster
