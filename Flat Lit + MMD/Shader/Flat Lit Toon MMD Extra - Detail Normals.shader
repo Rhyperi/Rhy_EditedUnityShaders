@@ -1,15 +1,15 @@
 Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 {
-		Properties
+	Properties
 	{
 		_MainTex("MainTex", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_ColorMask("ColorMask", 2D) = "black" {}
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
-		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 10)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
-		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 10)) = 1.0
 		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,2)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
@@ -35,6 +35,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
 		[HideInInspector] _ZWrite ("__zw", Float) = 1.0
 	}
+	
+	
 	
 	SubShader
 	{
@@ -84,11 +86,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(i.uv0, _DetailMap)));
+				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(UnityStereoTransformScreenSpaceTex(i.uv0), _DetailMap)));
 				float3 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
 				_DetailMap_var *= _DetailMapMask_var.rgb;
-				float3 maskedDetailNormalDirection = normalize(mul(_DetailMap_var.rgb, tangentTransform)); // Perturbed normals
-				float3 maskedNormalDirection = normalize(mul((float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z)), tangentTransform));
+				float3 maskedNormalDirection = normalize(mul(float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z), tangentTransform));
 				
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 							
@@ -105,7 +106,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				}
 				
 				float NdL = dot(maskedNormalDirection, float4(lightDirection.xyz, 0));
-				float remappedRamp = (NdL * 0.45 + 0.5);
+				float remappedRamp = 0.4 * NdL + 0.5;
 				
 				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -139,46 +140,45 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 					float cosX = cos(cameraRoll);
 					float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
 					viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
-					maskedViewNormal.xy = mul(maskedViewCross, rotationMatrix*faceSign);
+					maskedViewNormal.xy = mul(maskedViewNormal, rotationMatrix*faceSign);
 				}
 				
+				//float2 sphereUV = matcapSample(float3(0,1,0), viewDir, viewNormal);
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
-				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity);
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
-				sphereMul.rgb *= _SphereMulIntensity;
+				float4 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
+				float3 sphereAdd = tex2D(_SphereAddTex, sphereUV);
+				sphereAdd *= (sphereMap_var * _SphereAddIntensity);
+				float3 sphereMul = tex2D(_SphereMulTex, sphereUV);
+				sphereMul *= _SphereMulIntensity;
 				
+				//float2 maskedSphereUV = matcapSample(float3(0,1,0), viewDir, maskedViewNormal);
 				float2 maskedSphereUV = maskedViewNormal.xy * 0.5 + 0.5;
-				float4 maskedSphereAdd = tex2D(_SphereAddTex, maskedSphereUV);
-				maskedSphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity);
-				float4 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
-				maskedSphereAdd.rgb *= _SphereMulIntensity;
+				float3 maskedSphereAdd = tex2D(_SphereAddTex, maskedSphereUV);
+				maskedSphereAdd *= (sphereMap_var.rgb * _SphereAddIntensity);
+				float3 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
+				maskedSphereMul *= _SphereMulIntensity;
 
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
-				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
 				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
-				float grayscaleDirectLighting = dot(lightDirection, maskedNormalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(maskedNormalDirection);
+				float colorIndirectLighting = dot(lightDirection, maskedNormalDirection)*lightColor.rgb * attenuation + grayscaleSH9(maskedNormalDirection);
 
-				float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
-				float remappedLight = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
+				float lightDifference = topIndirectLighting + lightColor.rgb - bottomIndirectLighting;
+				float remappedLight = (colorIndirectLighting - bottomIndirectLighting) / lightDifference;
 
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
-				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
+				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + lightColor.rgb));
 				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
 				
 				float3 toonTexColorDetail = tex2D( _ToonTex, remappedRamp.xx).xyz;
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
+				float tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
+				float3 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex)).xyz;
 
-				float3 finalColor = emissive + (_ColorIntensity * baseColor * (sphereMul * maskedSphereMul) + (sphereAdd + maskedSphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * (toonTexColor.rgb * toonTexColorDetail.rgb);
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, directContribution) * lerp(toonTexColor, toonTexColorDetail, 0.5);
 				fixed4 finalRGBA = fixed4(finalColor, _MainTex_var.a);			
 				
-				#if !defined(_ALPHABLEND_ON) && !defined(_ALPHAPREMULTIPLY_ON)
-                    UNITY_OPAQUE_ALPHA(finalRGBA.a);
-                #endif
+                UNITY_OPAQUE_ALPHA(finalRGBA.a);
 				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
@@ -225,7 +225,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX((i.uv0 * _DetailMap_ST.xy + _DetailMap_ST.zw), _DetailMap)));
 				float4 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
 				_DetailMap_var *= _DetailMapMask_var.rgb;
-				float3 normalDirection = normalize(mul((float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z)), tangentTransform));
+				float3 normalDirection = normalize(mul(_DetailMap_var.rgb, tangentTransform));
 				
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -248,7 +248,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
 				float NdL = dot(normalDirection, float4(lightDirection.xyz, 0));
-				float remappedRamp = (NdL * 0.5 + 0.5);
+				float remappedRamp = (NdL * 0.4 + 0.5);
 				float3 toonTexColor = tex2D( _ToonTex, remappedRamp.xx).xyz;
 				
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);

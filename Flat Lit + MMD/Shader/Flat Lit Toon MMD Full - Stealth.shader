@@ -182,29 +182,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
+				float4 sphereAdd = tex2D(_SphereAddTex, UnityStereoTransformScreenSpaceTex(sphereUV));
 				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
+				float4 sphereMul = tex2D(_SphereMulTex, UnityStereoTransformScreenSpaceTex(sphereUV));
 				sphereMul.rgb *= _SphereMulIntensity;
-
-				#if COLORED_OUTLINE
-				if(i.is_outline) 
-				{
-					baseColor.rgb = i.col.rgb; 
-					sphereAdd = 0;
-					sphereMul = 1;
-				}
-				#endif
-
-				#if defined(_ALPHATEST_ON)
-        		clip (baseColor.a - _Cutoff);
-    			#endif
-				
+			
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
-				#ifdef LIGHTMAP_ON
-				lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
-				#endif
-
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
 				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
@@ -221,10 +204,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb);
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
 
 				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb * lightmap, finalColor * lightmap,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -346,25 +329,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
-
-				#if COLORED_OUTLINE
-				if(i.is_outline) 
-				{
-					baseColor.rgb = i.col.rgb; 
-					sphereAdd = 0;
-					sphereMul = 1;
-				}
-				#endif
-
-				#if defined(_ALPHATEST_ON)
-        		clip (baseColor.a - _Cutoff);
-    			#endif
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
-				#ifdef LIGHTMAP_ON
-				lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
-				#endif
-
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
 				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
@@ -381,7 +347,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation));
