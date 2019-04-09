@@ -74,7 +74,6 @@ v2g vert(appdata_full v) {
 	return o;
 }
 
-
 struct VertexOutput
 {
 	float4 pos : SV_POSITION;
@@ -121,6 +120,27 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	}
 
 	tristream.RestartStrip();
+}
+
+float2 matcapSample(float3 worldUp, float3 viewDirection, float3 normalDirection)
+{
+	half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
+	half3 worldViewRight = normalize(cross(viewDirection, worldViewUp));
+	half2 matcapUV = half2(dot(worldViewRight, normalDirection), dot(worldViewUp, normalDirection)) * 0.5 + 0.5;
+	return matcapUV;				
+}
+
+float3 VRViewPosition()
+{
+	#if defined(USING_STEREO_MATRICES)
+		float3 leftEye = unity_StereoWorldSpaceCameraPos[0];
+		float3 rightEye = unity_StereoWorldSpaceCameraPos[1];
+            
+		float3 centerEye = lerp(leftEye, rightEye, 0.5);
+    #else
+		float3 centerEye = _WorldSpaceCameraPos;
+    #endif
+    return centerEye;
 }
 
 float grayscaleSH9(float3 normalDirection)

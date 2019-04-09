@@ -121,15 +121,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
+				float4 sphereAdd = tex2D(_SphereAddTex, UnityStereoTransformScreenSpaceTex(sphereUV));
 				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
+				float4 sphereMul = tex2D(_SphereMulTex, UnityStereoTransformScreenSpaceTex(sphereUV));
 				sphereMul.rgb *= _SphereMulIntensity;
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
-				#ifdef LIGHTMAP_ON
-					lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw);
-				#endif
 
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
@@ -144,10 +141,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb) ;
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
 				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
 				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -207,7 +204,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 
 
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
-				float tempValue = 0.45 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
@@ -229,7 +226,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 			ZTest LEqual
 
 			CGPROGRAM
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonShadows.cginc"
 			
 			#pragma multi_compile_shadowcaster
