@@ -37,7 +37,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 	{
 		Tags
 		{
-			"Queue"="Geometry"
 			"RenderType" = "Opaque"
 		}
 
@@ -46,7 +45,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
-			Blend SrcAlpha OneMinusSrcAlpha
+			Blend [_SrcBlend] [_DstBlend]
 			ZWrite On
 			LOD 200
 			Cull Off
@@ -101,7 +100,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				emissive.rgb *= _EmissionIntensity;
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
+				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
@@ -130,24 +129,30 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
-				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
 				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
-				float grayscaleDirectLighting = dot(lightDirection, normalDirection)*lightColor * attenuation + grayscaleSH9(normalDirection);
+				float colorIndirectLighting = dot(lightDirection, normalDirection)*lightColor.rgb * attenuation + grayscaleSH9(normalDirection);
 
-				float lightDifference = topIndirectLighting + lightColor - bottomIndirectLighting;
-				float remappedLight = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
+				float lightDifference = topIndirectLighting + lightColor.rgb - bottomIndirectLighting;
+				float remappedLight = (colorIndirectLighting - bottomIndirectLighting) / lightDifference;
 
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
-				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
+				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + lightColor.rgb));
 				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
+				
 				float tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
+				float3 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
+				float finalAlpha = _MainTex_var.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
 				
-                UNITY_OPAQUE_ALPHA(finalRGBA.a);
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor;
+				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);			
+				
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -159,9 +164,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
-			ZWrite Off
-			LOD 200
-			Cull Off
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 
@@ -200,17 +202,24 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
+				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
 				baseColor *= float4(i.col.rgb, 1);
-
+				
+				float finalAlpha = baseColor.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
+				
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
-				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.4 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
-				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution) + attenuation)) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
+				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate(directContribution + attenuation)) * toonTexColor.rgb;
+				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);
 
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
