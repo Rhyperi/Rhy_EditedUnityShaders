@@ -51,7 +51,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
-			Blend SrcAlpha OneMinusSrcAlpha
+			Blend [_SrcBlend] [_DstBlend]
 			ZWrite On
 			LOD 200
 			Cull Off
@@ -173,12 +173,17 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				
 				float3 toonTexColorDetail = tex2D( _ToonTex, remappedRamp.xx).xyz;
 				float tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
-				float3 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex)).xyz;
+				float3 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
+
+				float finalAlpha = baseColor.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
 
 				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, directContribution) * lerp(toonTexColor, toonTexColorDetail, 0.5);
-				fixed4 finalRGBA = fixed4(finalColor, _MainTex_var.a);			
+				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);			
 				
-                UNITY_OPAQUE_ALPHA(finalRGBA.a);
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
 				
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
@@ -191,9 +196,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
-			ZWrite Off
-			LOD 200
-			Cull Off
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 
@@ -243,8 +245,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
+				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
 				baseColor *= float4(i.col.rgb, 1);
+
+				float finalAlpha = baseColor.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
 
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
 				float NdL = dot(normalDirection, float4(lightDirection.xyz, 0));
@@ -253,8 +259,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
 				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, directContribution + attenuation) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
+				fixed4 finalRGBA = fixed4(finalColor * finalAlpha, 1) * i.col;
 
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}

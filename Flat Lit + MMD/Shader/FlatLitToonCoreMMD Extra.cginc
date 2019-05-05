@@ -21,21 +21,27 @@ uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
+uniform sampler2D _EmissionMap2; uniform float4 _EmissionMap2_ST;
+uniform sampler2D _EmissionMask2; uniform float4 _EmissionMask2_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 uniform sampler2D _NormalMask; uniform float4 _NormalMask_ST;
 
 uniform float _SpeedX; uniform float _SpeedY;
-uniform float4 _Color;
+uniform float _SpeedX2; uniform float _SpeedY2;
+uniform float4 _Color; uniform float4 _rTint; uniform float4 _bTint; uniform float4 _gTint; 
 uniform float _ColorIntensity;
 uniform float _SphereAddIntensity;
 uniform float _SphereMulIntensity;
 uniform float _Cutoff;
 uniform float4 _EmissionColor;
 uniform float _EmissionIntensity;
+uniform float4 _EmissionColor2;
+uniform float _EmissionIntensity2;
 uniform float _outline_width;
 uniform float4 _outline_color;
 uniform float4 _DefaultLightDir;
 uniform float _SpecularToggle;
+uniform float _Mode;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 

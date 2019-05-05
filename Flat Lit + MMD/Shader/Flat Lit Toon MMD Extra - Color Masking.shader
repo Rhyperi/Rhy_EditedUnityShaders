@@ -1,10 +1,13 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Color Masking"
 {
 	Properties
 	{
 		_MainTex("MainTex", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_ColorMask("ColorMask", 2D) = "black" {}
+		_rTint("Red Tint", Color) = (1,1,1,1)
+		_bTint("Blue Tint", Color) = (1,1,1,1)
+		_gTint("Green Tint", Color) = (1,1,1,1)
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
@@ -98,9 +101,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
 				emissive.rgb *= emissionMask_var.rgb;
 				emissive.rgb *= _EmissionIntensity;
-				
+
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
+				float cmask = min(1.0, _ColorMask_var.r + _ColorMask_var.g + _ColorMask_var.b);
+				float4 baseColor = (_MainTex_var.rgba*_Color.rgba) * (1 - cmask) + (_rTint * _ColorMask_var.r) + (_bTint * _ColorMask_var.g) + (_gTint * _ColorMask_var.b);
 
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
@@ -203,7 +207,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
+				float cmask = min(1.0, _ColorMask_var.r + _ColorMask_var.g + _ColorMask_var.b);
+				float4 baseColor = (_MainTex_var.rgba*_Color.rgba) * (1 - cmask) + (_rTint * _ColorMask_var.r) + (_bTint * _ColorMask_var.g) + (_gTint * _ColorMask_var.b);
 				baseColor *= float4(i.col.rgb, 1);
 				
 				float finalAlpha = baseColor.a;
@@ -253,5 +258,5 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 	
 	
 	Fallback "Transparent/VertexLit"
-	CustomEditor "RhyFlatLitMMDEditor"
+	CustomEditor "RhyFlatLitMMDEditorColor"
 }

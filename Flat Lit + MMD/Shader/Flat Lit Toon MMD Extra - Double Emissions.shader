@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/2x Emissions"
 {
 	Properties
 	{
@@ -20,8 +20,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		_EmissionIntensity("Emission Intensity", Range(0, 20)) = 1.0
 		_SpeedX("Emission X speed", Float) = 1.0
 		_SpeedY("Emission Y speed", Float) = 1.0
+		_EmissionMap2("2nd Emission Map", 2D) = "white" {}
+		_EmissionMask2("2nd Emission Mask", 2D) = "white" {}
+		_EmissionIntensity2("2nd Emission Intensity", Range(0, 20)) = 1.0
+		_SpeedX2("2nd Emission X speed", Float) = 1.0
+		_SpeedY2("2nd Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
+		[HDR]_EmissionColor2("Emission Color", Color) = (0,0,0,1)
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 
@@ -61,7 +67,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			#pragma only_renderers d3d11 glcore gles
 
 			float2 emissionUV;
-			float2 emissionMovement;
+			float2 emissionUV2;
 			
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
 			{			
@@ -70,6 +76,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
+				
+				emissionUV2 = i.uv0;
+				emissionUV2.x += _Time.x * _SpeedX2;
+				emissionUV2.y += _Time.x * _SpeedY2;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				
 				i.normalDir = normalize(i.normalDir);
@@ -98,6 +108,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
 				emissive.rgb *= emissionMask_var.rgb;
 				emissive.rgb *= _EmissionIntensity;
+				
+				float4 _EmissionMap_var2 = tex2D(_EmissionMap2,TRANSFORM_TEX(i.uv0, _EmissionMap2));
+				float4 emissionMask_var2 = tex2D(_EmissionMask2,TRANSFORM_TEX(emissionUV2, _EmissionMask2));
+				float3 emissive2 = (_EmissionMap_var2.rgb*_EmissionColor2.rgb);
+				emissive2.rgb *= emissionMask_var2.rgb;
+				emissive2.rgb *= _EmissionIntensity2;
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
@@ -148,7 +164,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				if(_Mode == 1)
 					clip (finalAlpha - _Cutoff);
 				
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor;
+				float3 finalColor = lerp(emissive, emissive2, 0.5) + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor;
 				fixed4 finalRGBA = fixed4(finalColor * lightmap, finalAlpha);			
 				
 				if(_Mode == 1)
@@ -253,5 +269,5 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 	
 	
 	Fallback "Transparent/VertexLit"
-	CustomEditor "RhyFlatLitMMDEditor"
+	CustomEditor "RhyFlatLitMMDEditor2xEmission"
 }

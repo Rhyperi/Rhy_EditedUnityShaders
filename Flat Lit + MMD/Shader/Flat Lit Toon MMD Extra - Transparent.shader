@@ -47,7 +47,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
-			Blend SrcAlpha OneMinusSrcAlpha
+			Blend [_SrcBlend] [_DstBlend]
 			ZWrite On
 			LOD 200
 			Cull Off
@@ -73,9 +73,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
+				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 							
@@ -121,9 +122,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, UnityStereoTransformScreenSpaceTex(sphereUV));
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, UnityStereoTransformScreenSpaceTex(sphereUV));
+				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
+				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity);
+				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 				
 				float3 lightmap = float4(1.0,1.0,1.0,1.0);
@@ -141,12 +142,19 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
 				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
 				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
-				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.4 * dot(normalDirection, lightDirection) + 0.5;
+				
+				float finalAlpha = baseColor.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * lightmap, _MainTex_var.a);			
+				fixed4 finalRGBA = fixed4(finalColor * lightmap, finalAlpha);			
 				
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -158,9 +166,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
-			ZWrite Off
-			LOD 200
-			Cull Off
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 
@@ -181,7 +186,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -199,18 +204,24 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent"
 				}
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
+				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
 				baseColor *= float4(i.col.rgb, 1);
 
+				float finalAlpha = baseColor.a;
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
 
 				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
-				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
+				float tempValue = 0.4 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
-				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation)) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * _MainTex_var.a, 1) * i.col;
+				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate(directContribution + attenuation)) * toonTexColor.rgb;
+				fixed4 finalRGBA = fixed4(finalColor * finalAlpha, 1) * i.col;
 
+				if(_Mode == 1)
+					UNITY_OPAQUE_ALPHA(finalRGBA.a);
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
