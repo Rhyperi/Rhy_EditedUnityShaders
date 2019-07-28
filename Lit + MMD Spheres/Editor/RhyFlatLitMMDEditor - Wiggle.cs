@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RhyFlatLitMMDEditor : ShaderGUI
+public class RhyFlatLitMMDEditorWiggle : ShaderGUI
 {
 
     public enum OutlineMode
@@ -23,6 +23,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
 
     MaterialProperty blendMode;
     MaterialProperty mainTexture;
+    MaterialProperty opacity;
     MaterialProperty color;
     MaterialProperty colorMask;
     MaterialProperty colIntensity;
@@ -39,6 +40,13 @@ public class RhyFlatLitMMDEditor : ShaderGUI
     MaterialProperty emissionIntensity;
     MaterialProperty speedX;
     MaterialProperty speedY;
+    MaterialProperty noiseTexture;
+    MaterialProperty noiseMask;
+    MaterialProperty noiseX;
+    MaterialProperty noiseY;
+    MaterialProperty noiseZ;
+    MaterialProperty speedX2;
+    MaterialProperty speedY2;
     MaterialProperty normalMap;
     MaterialProperty alphaCutoff;
 
@@ -48,6 +56,7 @@ public class RhyFlatLitMMDEditor : ShaderGUI
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
             mainTexture = FindProperty("_MainTex", props);
+            opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
             colIntensity = FindProperty("_ColorIntensity", props);
@@ -64,6 +73,13 @@ public class RhyFlatLitMMDEditor : ShaderGUI
             emissionIntensity = FindProperty("_EmissionIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
+            noiseTexture = FindProperty("_NoiseTex", props);
+            noiseMask = FindProperty("_NoiseMask", props);
+            noiseX = FindProperty("_NoiseX", props);
+            noiseY = FindProperty("_NoiseY", props);
+            noiseZ = FindProperty("_NoiseZ", props);
+            speedX2 = FindProperty("_SpeedX2", props);
+            speedY2 = FindProperty("_SpeedY2", props);
             normalMap = FindProperty("_BumpMap", props);
             alphaCutoff = FindProperty("_Cutoff", props);
         }
@@ -97,6 +113,8 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
+                    materialEditor.ShaderProperty(opacity, "Opacity", 1);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -125,6 +143,16 @@ public class RhyFlatLitMMDEditor : ShaderGUI
                     materialEditor.TextureScaleOffsetProperty(emissionMask);
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
+                EditorGUI.indentLevel -= 2;
+                GUILayout.Space(6);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Noise Texture", "Noise Texture"), noiseTexture);              
+                materialEditor.TexturePropertySingleLine(new GUIContent("Noise Mask"), noiseMask);
+                EditorGUI.indentLevel += 2;
+                materialEditor.ShaderProperty(noiseX, new GUIContent("Noise X modifier"), 0);
+                materialEditor.ShaderProperty(noiseY, new GUIContent("Noise Y modifier"), 0);
+                materialEditor.ShaderProperty(noiseZ, new GUIContent("Noise Z modifier"), 0);
+                materialEditor.ShaderProperty(speedX2, new GUIContent("Noise X Scroll Speed"), 0);
+                materialEditor.ShaderProperty(speedY2, new GUIContent("Noise Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 EditorGUI.BeginChangeCheck();
                 

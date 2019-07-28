@@ -1,0 +1,129 @@
+Hello!  And first of all thank you for downloading and trying out my shader.
+I do this out of a hobby and love of nice effects in VR, so if you see errors or other oddities, please be patient and let me know what you see.
+I don't see this getting spread far and wide so I don't see my putting any sort of contact info at this moment.
+But once again, thank you.
+
+Step 1:
+-Installation-
+Simply unzip your desired shader batch into your project folder and then it should properly detect and install.
+
+-Updating-
+Delete the previous version and then install the newer one to prevent any sort of naming inconsistances or other errors in Unity
+
+Step 2:
+-Using the Shader-
+When looking at materials, select one of my shaders under the "Rhy Custom Shaders" then "Flat Lit Toon + MMD" (I'll need to change this).
+From there simply slap in the right textures to their spots, play with settings, and then you're good!
+
+=Basic=
+The basic shader is the foundation for all the others, so these insturctions will apply to all the others.
+Render Queue: 
+	Geometry
+
+Rendering Mode:
+	Opaque - No transparency and self-shadowing
+	Cutout - Semi transparency support + cutout slider and self-shadowing
+	Fade - Semi transparency support and no self-shadowing
+	Transparent - Blanket transparency + opacity slider (note: still being worked on) and no self-shadowing
+
+-General Texture Section-	
+	Main Texture:
+		The main texture to be displayed, often called albedo.
+		Color can be changed with the color picker off to the right.
+	
+	Color Intensity:
+		Use this to brighten or darken the base color.	
+		*Future plans - Add in saturation slider*
+		
+	*Only in Cutout:
+	Alpha Cutoff:
+		Use this to determine what level of alpha (transparency) on the texture to start making transparent
+		
+	*Only in Transparent:
+	Opacity:
+		Use this to determine the blanket level of transparency to all parts of the texture
+		
+	Color Mask:
+		A mask that can alter colors of the base texture.  Mostly a legacy feature.
+		
+-Sphere Texture Section-
+	Additive Sphere Texture:
+		Place a matcap/sphere texture into this slot to determine it's effects on the specular/shine on the material
+		
+	Additive Sphere Mask:
+		Place a texture here to mask over the sphere above.  Neat feature! The mask's color will influence the final result.  So instead of a pure black/white texture,
+		use a texture with colors on it to slightly color the shine in the final result.  When used well does an absolutely wonderful job of increasing the richness of the shine.
+		
+	Additive Sphere Intensity:
+		The strength of the additive shine.
+		
+	Multiply Sphere Texture:
+		Similar to above, just now the multiplicitive sphere texture.
+		
+	Multiply Sphere Intensity:
+		The strength of the multiply sphere.
+		
+-Toon Ramp Section-
+	Toon Texture:
+		Use a !vertical! ramp texture to determine the shading done.
+		
+	Shadow Texture:
+		Use a !vertical! ramp texture to determine how the self-shadowing is colored.
+		
+	Default Light Direction:
+		Used in baked and unlit scenarios, gives the shader a default direction to pretend where the light is coming from.
+		
+-Normal Maps Section-
+	Normal Map:
+		Use a normals texture to apply it to the material.
+		
+	Tiling:
+		Increase to tile the normal across the material.
+	
+	Offset:
+		Increase to offsent the texture.  Not really of much use, just came with the editor.
+		
+-Other Effecs Section-
+	Emission:
+		Use a mask texture to determine what should be emissive.
+		Use the color picker on the right to determine the color of the emission.  Use white if you want the texture's color to come through.
+		
+	Intensity:
+		The strength of the emission.
+		
+	Emission Mask:
+		Used in the scrolling emissions.  Select a mask texture to determine what part of the emission is shown or not.  Colors of the mask still influence the final result.
+		
+	Mask X/Y Scroll Speed:
+		Input the speed of how fast the mask above should scroll, creating animated emissions.
+		
+
+=Detail Noramls=
+Similar to the basic shader, but has both support for normal maps and detail normal maps.
+	
+=Transparent Lit=
+Render Queue: Transparent-2
+Mainly to be used in cases where you have a semi-transparent object that still needs self-shadowing such as clothing.  *Make sure to use it in Cutout Render Mode!*
+
+=Transparent Unlit=
+Render Queue: Transparent-1
+Mainly to be used in cases like blushes or other effects that don't need to be affected by self-shadowing.
+
+=2x Emissions=
+Similar to basic shader, just has support for 2 scrolling emissions on one material
+
+=Wiggle=
+Similar to basic shader, but can be given a mask and settings to wobble verts around for dumb fun.
+wiggle wiggle.
+
+=Color Masking=
+Similar to basic shader.  Use a mask to apply a decal-like effect to the material, can also control the RGB effects as well.
+
+=Stealth=
+An older shader, no self-shadowing as of yet.
+Has a stealth effect, think predator cloak, that can be set with effect of the cloak, the strength, color, and other things.
+Is on the docket to recieve the lighting upgrade .
+
+=Other shaders=
+These are old and side projects that I've done for myself or others, they may, and probably will, cause issues when you plop them into your project, so please be careful.
+I don't plan on revisiting these at the moment, but if people are curious for updated ones I can look into it.
