@@ -46,6 +46,7 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
 
     MaterialProperty blendMode;
     MaterialProperty mainTexture;
+    MaterialProperty opacity;
     MaterialProperty color;
     MaterialProperty colorMask;
     MaterialProperty colIntensity;
@@ -74,6 +75,7 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
             mainTexture = FindProperty("_MainTex", props);
+            opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
             colIntensity = FindProperty("_ColorIntensity", props);
@@ -126,7 +128,9 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
-                materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                    materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
+                    materialEditor.ShaderProperty(opacity, "Opacity", 1);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;

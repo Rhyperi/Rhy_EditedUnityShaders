@@ -27,6 +27,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 		_DetailMapMask("Detail Normal Map Mask", 2D) = "white" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		_SpecularToggle("Specular Toggle", Float) = 1
+		_Opacity("Opacity", Range(0,1)) = 0
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -49,10 +50,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 		Pass
 		{
 			Name "FORWARD"
-			Tags { "LightMode" = "ForwardBase" }
+			Tags { "LightMode" = "ForwardBase"}
 
 			Blend [_SrcBlend] [_DstBlend]
 			ZWrite On
+			ZTest LEqual
 			LOD 200
 			Cull Off
 						
@@ -61,7 +63,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
+
 			#pragma multi_compile_fog
+			#pragma multi_compile_fwdbase
 			#pragma target 4.0
 			#pragma only_renderers d3d11 glcore gles
 			
@@ -86,30 +90,35 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(UnityStereoTransformScreenSpaceTex(i.uv0), _DetailMap)));
+				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(i.uv0, _DetailMap)));
 				float3 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
 				_DetailMap_var *= _DetailMapMask_var.rgb;
 				float3 maskedNormalDirection = normalize(mul(float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z), tangentTransform));
 				
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 							
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
+				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);	
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				if( light_Env != 1)
+				float3 lightColor = _LightColor0.rgb;
+				float3 indirectDiffuse = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+				
+				#if !defined(POINT) && !defined(SPOT) && !defined(VERTEXLIGHT_ON) // if the average length of the light probes is null, and we don't have a directional light in the scene, fall back to our fallback lightDir
+					if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0 && length(lightDirection) < 0.1)
+					{
+						lightDirection = _DefaultLightDir;
+					}
+				#endif
+				
+				if(light_Env != 1)
 				{
-						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-					
-						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-						{
-							lightDirection = normalize(_DefaultLightDir.xyz);
-						}
+					lightColor = indirectDiffuse.xyzz;
 				}
+				
+				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
 				
 				float NdL = dot(maskedNormalDirection, float4(lightDirection.xyz, 0));
 				float remappedRamp = 0.4 * NdL + 0.5;
-				
-				float3 lightColor = _LightColor0.rgb;
-				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
@@ -158,33 +167,56 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
 				maskedSphereMul *= _SphereMulIntensity;
 
+				float4 lightmap = float4(1.0,1.0,1.0,1.0);
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
 
 				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
-				float colorIndirectLighting = dot(lightDirection, maskedNormalDirection)*lightColor.rgb * attenuation + grayscaleSH9(maskedNormalDirection);
+				float colorIndirectLighting = dot(lightDirection, normalDirection) * lightColor * attenuation + grayscaleSH9(normalDirection);
+				float3 ShadeSH9Plus = GetSHLength();
+				float3 ShadeSH9Minus = ShadeSH9(float4(0, 0, 0, 1));
+				
+				float3 indirectLighting = (ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap);
+				float3 directLighting = (ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + lightColor);
+				
+				//float bw_lightColor = dot(float3(clamp(lightColor.x, 0, 1), clamp(lightColor.y, 0, 1), clamp(lightColor.z, 0, 1)), grayscale_vector);
+				float bw_lightColor = dot(lightColor, grayscale_vector);
+				float bw_directLighting = dot(lightDirection, normalDirection) * bw_lightColor * attenuation + grayscaleSH9(normalDirection);
+				float bw_bottomIndirectLighting = dot(bottomIndirectLighting, grayscale_vector);
+				float bw_topIndirectLighting = dot(topIndirectLighting, grayscale_vector);
+				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor - bw_bottomIndirectLighting);
+				float3 directContribution = saturate(1 + floor(saturate(bw_lightDifference) * 2.5));
+				float rampValue = smoothstep(-0.2, bw_lightDifference, bw_directLighting - bw_bottomIndirectLighting);
+				
+				float tempValue = (0.4 * dot(normalDirection, lightDirection) + 0.5) * rampValue;
+				
+				#if !defined (SHADOWS_SCREEN) && !defined (SHADOWS_DEPTH) && !defined (SHADOWS_CUBE)
+					tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
+				#endif
 
-				float lightDifference = topIndirectLighting + lightColor.rgb - bottomIndirectLighting;
-				float remappedLight = (colorIndirectLighting - bottomIndirectLighting) / lightDifference;
-
-				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
-				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + lightColor.rgb));
-				float3 directContribution = saturate(1 + floor(saturate(remappedLight) * 2.5));
+				if(light_Env != 1)
+					tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
 				
 				float3 toonTexColorDetail = tex2D( _ToonTex, remappedRamp.xx).xyz;
-				float tempValue = 0.4 * dot(normalDirection, lightDirection.xyz) + 0.5;
 				float3 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-
+				
 				float finalAlpha = _MainTex_var.a;
 				if(_Mode == 1)
 					clip (finalAlpha - _Cutoff);
+				if(_Mode == 3)
+					finalAlpha -= _Opacity;
 
 				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, directContribution) * lerp(toonTexColor, toonTexColorDetail, 0.5);
+				
+				if(light_Env != 1)
+					finalColor = emissive + (_ColorIntensity * baseColor * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(0, lightColor, attenuation) * lerp(toonTexColor, toonTexColorDetail, 0.5);
+				
+				
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);			
 				
 				if(_Mode == 1)
 					UNITY_OPAQUE_ALPHA(finalRGBA.a);
-				
+					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -210,60 +242,37 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
-			
-			uniform sampler2D _DetailMap;
-			float4 _DetailMap_ST;
-			uniform sampler2D _DetailMapMask;
-			float4 _DetailMapMask_ST;
+
 
 			float4 frag(VertexOutput i) : COLOR
 			{
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
-				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX((i.uv0 * _BumpMap_ST.xy + _BumpMap_ST.zw), _BumpMap)));
-				float3 rampNormals = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX((i.uv0 * _DetailMap_ST.xy + _DetailMap_ST.zw), _DetailMap)));
-				float4 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
-				_DetailMap_var *= _DetailMapMask_var.rgb;
-				float3 normalDirection = normalize(mul(_DetailMap_var.rgb, tangentTransform));
-				
+				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
+				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
-				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-	
+
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				if( light_Env != 1)
-				{
-						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-					
-						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-						{
-							lightDirection = normalize(_DefaultLightDir.xyz);
-						}
-				}
+				float3 lightColor = _LightColor0.rgb;
+				
+				#if !defined(POINT) && !defined(SPOT) && !defined(VERTEXLIGHT_ON) // if the average length of the light probes is null, and we don't have a directional light in the scene, fall back to our fallback lightDir
+					if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0 && length(lightDirection) < 0.1)
+					{
+						lightDirection = _DefaultLightDir;
+					}
+				#endif
+				
+				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 	
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-				baseColor *= float4(i.col.rgb, 1);
 
-				float finalAlpha = baseColor.a;
-				if(_Mode == 1)
-					clip (finalAlpha - _Cutoff);
-
-				float lightContribution = dot(normalize(lightDirection - i.posWorld.xyz),normalDirection)*attenuation;
-				float NdL = dot(normalDirection, float4(lightDirection.xyz, 0));
-				float remappedRamp = (NdL * 0.4 + 0.5);
-				float3 toonTexColor = tex2D( _ToonTex, remappedRamp.xx).xyz;
-				
+				float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz), normalDirection)*attenuation;
 				float3 directContribution = floor(saturate(lightContribution) * 2.5);
-				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, directContribution + attenuation) * toonTexColor.rgb;
-				fixed4 finalRGBA = fixed4(finalColor * finalAlpha, 1) * i.col;
+				float3 finalColor = baseColor * lerp(0, lightColor, attenuation);
+				fixed4 finalRGBA = fixed4(finalColor,1);
 
-				if(_Mode == 1)
-					UNITY_OPAQUE_ALPHA(finalRGBA.a);
-					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}

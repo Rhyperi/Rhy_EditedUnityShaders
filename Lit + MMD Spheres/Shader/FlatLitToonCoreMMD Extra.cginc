@@ -42,6 +42,7 @@ uniform float4 _outline_color;
 uniform float4 _DefaultLightDir;
 uniform float _SpecularToggle;
 uniform float _Mode;
+uniform float _Opacity;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
@@ -72,7 +73,6 @@ v2g vert(appdata_full v) {
 	o.bitangentDir = normalize(cross(o.normalDir, o.tangentDir) * v.tangent.w);
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
-	float3 lightColor = _LightColor0.rgb;
 	o.vertex = v.vertex;
 	o.pos = UnityObjectToClipPos(v.vertex);
 	TRANSFER_SHADOW(o);
@@ -90,7 +90,6 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 col : COLOR;
-	bool is_outline : IS_OUTLINE;
 	SHADOW_COORDS(6)
 	UNITY_FOG_COORDS(7)
 };
@@ -110,7 +109,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.tangentDir = IN[ii].tangentDir;
 		o.bitangentDir = IN[ii].bitangentDir;
 		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
-		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
@@ -147,6 +145,32 @@ float3 VRViewPosition()
 		float3 centerEye = _WorldSpaceCameraPos;
     #endif
     return centerEye;
+}
+
+float FadeShadows(float attenuation, float3 worldPosition)
+{
+    float viewZ = dot(_WorldSpaceCameraPos - worldPosition, UNITY_MATRIX_V[2].xyz);
+    float shadowFadeDistance = UnityComputeShadowFadeDistance(worldPosition, viewZ);
+    float shadowFade = UnityComputeShadowFade(shadowFadeDistance);
+    attenuation = saturate(attenuation + shadowFade);
+    return attenuation;
+}
+
+half3 GetSHLength()
+{
+    half3 x, x1;
+    x.r = length(unity_SHAr);
+    x.g = length(unity_SHAg);
+    x.b = length(unity_SHAb);
+    x1.r = length(unity_SHBr);
+    x1.g = length(unity_SHBg);
+    x1.b = length(unity_SHBb);
+    return x + x1;
+}
+
+float3 ShadeSH9Normal(float3 normalDirection)
+{
+    return ShadeSH9(half4(normalDirection, 1.0));
 }
 
 float grayscaleSH9(float3 normalDirection)

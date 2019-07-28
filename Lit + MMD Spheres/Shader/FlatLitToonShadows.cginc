@@ -61,7 +61,6 @@ void vertShadowCaster(VertexInput v,
     #endif
 }
 
-
 half4 fragShadowCaster(
     #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
         VertexOutputShadowCaster i
@@ -90,5 +89,6 @@ half4 fragShadowCaster(
 
     SHADOW_CASTER_FRAGMENT(i)
 }
+
 
 #endif

@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RhyFlatLitMMDEditorWiggle : ShaderGUI
+public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
 {
 
     public enum OutlineMode
@@ -23,6 +23,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
 
     MaterialProperty blendMode;
     MaterialProperty mainTexture;
+    MaterialProperty opacity;
     MaterialProperty color;
     MaterialProperty colorMask;
     MaterialProperty colIntensity;
@@ -39,11 +40,10 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
     MaterialProperty emissionIntensity;
     MaterialProperty speedX;
     MaterialProperty speedY;
-    MaterialProperty noiseTexture;
-    MaterialProperty noiseMask;
-    MaterialProperty noiseX;
-    MaterialProperty noiseY;
-    MaterialProperty noiseZ;
+    MaterialProperty emissionMap2;
+    MaterialProperty emissionColor2;
+    MaterialProperty emissionMask2;
+    MaterialProperty emissionIntensity2;
     MaterialProperty speedX2;
     MaterialProperty speedY2;
     MaterialProperty normalMap;
@@ -55,6 +55,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
             mainTexture = FindProperty("_MainTex", props);
+            opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
             colIntensity = FindProperty("_ColorIntensity", props);
@@ -71,11 +72,10 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
             emissionIntensity = FindProperty("_EmissionIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
-            noiseTexture = FindProperty("_NoiseTex", props);
-            noiseMask = FindProperty("_NoiseMask", props);
-            noiseX = FindProperty("_NoiseX", props);
-            noiseY = FindProperty("_NoiseY", props);
-            noiseZ = FindProperty("_NoiseZ", props);
+            emissionMap2 = FindProperty("_EmissionMap2", props);
+            emissionColor2 = FindProperty("_EmissionColor2", props);
+            emissionMask2 = FindProperty("_EmissionMask2", props);
+            emissionIntensity2 = FindProperty("_EmissionIntensity2", props);
             speedX2 = FindProperty("_SpeedX2", props);
             speedY2 = FindProperty("_SpeedY2", props);
             normalMap = FindProperty("_BumpMap", props);
@@ -111,6 +111,8 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
+                    materialEditor.ShaderProperty(opacity, "Opacity", 1);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -140,15 +142,13 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
-                GUILayout.Space(6);
-                materialEditor.TexturePropertySingleLine(new GUIContent("Noise Texture", "Noise Texture"), noiseTexture);              
-                materialEditor.TexturePropertySingleLine(new GUIContent("Noise Mask"), noiseMask);
+                materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission", "2nd Emission Mask"), emissionMap2, emissionColor2);
+                materialEditor.ShaderProperty(emissionIntensity2, "2nd Intensity", 2);
                 EditorGUI.indentLevel += 2;
-                materialEditor.ShaderProperty(noiseX, new GUIContent("Noise X modifier"), 0);
-                materialEditor.ShaderProperty(noiseY, new GUIContent("Noise Y modifier"), 0);
-                materialEditor.ShaderProperty(noiseZ, new GUIContent("Noise Z modifier"), 0);
-                materialEditor.ShaderProperty(speedX2, new GUIContent("Noise X Scroll Speed"), 0);
-                materialEditor.ShaderProperty(speedY2, new GUIContent("Noise Y Scroll Speed"), 0);
+                materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission Mask"), emissionMask2);
+                    materialEditor.TextureScaleOffsetProperty(emissionMask2);
+                    materialEditor.ShaderProperty(speedX2, new GUIContent("2nd Mask X Scroll Speed"), 0);
+                    materialEditor.ShaderProperty(speedY2, new GUIContent("2nd Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 EditorGUI.BeginChangeCheck();
                 

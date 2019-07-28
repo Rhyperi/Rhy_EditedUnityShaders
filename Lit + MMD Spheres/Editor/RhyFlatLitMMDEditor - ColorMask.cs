@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
+public class RhyFlatLitMMDEditorColor : ShaderGUI
 {
 
     public enum OutlineMode
@@ -23,8 +23,12 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
 
     MaterialProperty blendMode;
     MaterialProperty mainTexture;
+    MaterialProperty opacity;
     MaterialProperty color;
     MaterialProperty colorMask;
+    MaterialProperty rTint;
+    MaterialProperty bTint;
+    MaterialProperty gTint;
     MaterialProperty colIntensity;
     MaterialProperty sphereAddTexture;
     MaterialProperty sphereAddIntensity;
@@ -39,12 +43,6 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     MaterialProperty emissionIntensity;
     MaterialProperty speedX;
     MaterialProperty speedY;
-    MaterialProperty emissionMap2;
-    MaterialProperty emissionColor2;
-    MaterialProperty emissionMask2;
-    MaterialProperty emissionIntensity2;
-    MaterialProperty speedX2;
-    MaterialProperty speedY2;
     MaterialProperty normalMap;
     MaterialProperty alphaCutoff;
 
@@ -54,8 +52,12 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
             mainTexture = FindProperty("_MainTex", props);
+            opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
+            rTint = FindProperty("_rTint", props);
+            bTint = FindProperty("_bTint", props);
+            gTint = FindProperty("_gTint", props);
             colIntensity = FindProperty("_ColorIntensity", props);
             sphereAddTexture = FindProperty("_SphereAddTex", props);
             sphereAddIntensity = FindProperty("_SphereAddIntensity", props);
@@ -70,12 +72,6 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
             emissionIntensity = FindProperty("_EmissionIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
-            emissionMap2 = FindProperty("_EmissionMap2", props);
-            emissionColor2 = FindProperty("_EmissionColor2", props);
-            emissionMask2 = FindProperty("_EmissionMask2", props);
-            emissionIntensity2 = FindProperty("_EmissionIntensity2", props);
-            speedX2 = FindProperty("_SpeedX2", props);
-            speedY2 = FindProperty("_SpeedY2", props);
             normalMap = FindProperty("_BumpMap", props);
             alphaCutoff = FindProperty("_Cutoff", props);
         }
@@ -109,8 +105,13 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 EditorGUI.indentLevel += 2;          
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
+                    materialEditor.ShaderProperty(opacity, "Opacity", 1);
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
+                materialEditor.ShaderProperty(rTint, "Red Tint", 2);
+                materialEditor.ShaderProperty(bTint, "Blue Tint", 2);
+                materialEditor.ShaderProperty(gTint, "Green Tint", 2);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(6);
                 GUILayout.Label("-Sphere Textures-", EditorStyles.boldLabel);
@@ -137,14 +138,6 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                     materialEditor.TextureScaleOffsetProperty(emissionMask);
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
-                EditorGUI.indentLevel -= 2;
-                materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission", "2nd Emission Mask"), emissionMap2, emissionColor2);
-                materialEditor.ShaderProperty(emissionIntensity2, "2nd Intensity", 2);
-                EditorGUI.indentLevel += 2;
-                materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission Mask"), emissionMask2);
-                    materialEditor.TextureScaleOffsetProperty(emissionMask2);
-                    materialEditor.ShaderProperty(speedX2, new GUIContent("2nd Mask X Scroll Speed"), 0);
-                    materialEditor.ShaderProperty(speedY2, new GUIContent("2nd Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 EditorGUI.BeginChangeCheck();
                 
