@@ -169,10 +169,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Unlit"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * toonTexColor) / 2;
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * directLighting * toonTexColor);
 				
 				if(light_Env != 1)
-					finalColor = emissive + (((_ColorIntensity * baseColor * 2) * sphereMul + sphereAdd) * toonTexColor) / 2;
+					finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * directLighting * toonTexColor);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -293,10 +293,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Unlit"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * toonTexColor) / 2;
+				float3 finalColor = ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * toonTexColor);
 				
 				if(light_Env != 1)
-					finalColor = (((_ColorIntensity * baseColor * 2) * sphereMul + sphereAdd) * toonTexColor) / 2;
+					finalColor = ((_ColorIntensity * baseColor * sphereMul + sphereAdd) * toonTexColor);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -309,9 +309,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Unlit"
 		{
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
+			Blend [_SrcBlend] One
 
 			ZWrite On
 			ZTest LEqual
+			Cull Off
 
 			CGPROGRAM
 			#include "FlatLitToonShadows.cginc"

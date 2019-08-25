@@ -377,6 +377,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 			ENDCG
 		}
 	}
-	FallBack "Diffuse"
+	Fallback "Unlit/Texture"
 	CustomEditor "RhyFlatLitMMDEditorStealth"
 }

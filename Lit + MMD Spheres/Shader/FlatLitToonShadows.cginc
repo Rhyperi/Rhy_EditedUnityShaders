@@ -71,7 +71,7 @@ half4 fragShadowCaster(
 ) : SV_Target
 {
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        half alpha = tex2D(_MainTex, i.tex).a * _Color.a;
+        half alpha = tex2D(_MainTex, TRANSFORM_TEX(i.tex, _MainTex)).a;
     #if defined(_ALPHATEST_ON)
         clip(alpha - _Cutoff);
     #endif

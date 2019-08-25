@@ -166,7 +166,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
+				float3 finalColor = emissive + (_ColorIntensity * baseColor * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
 				
 				if(light_Env != 1)
 					finalColor = emissive + (_ColorIntensity * baseColor * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
@@ -298,14 +298,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation) / 2) * toonTexColor;
-				
-				#if defined(POINT)
-				{
-					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
-				}
-				#endif
-				
+				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation)) * toonTexColor;
+								
 				if(light_Env != 1)
 					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
 
@@ -320,9 +314,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		{
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
+			Blend [_SrcBlend] [_DstBlend]
 
 			ZWrite On
 			ZTest LEqual
+			Cull Off
 
 			CGPROGRAM
 			#include "FlatLitToonShadows.cginc"
@@ -338,6 +334,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			ENDCG
 		}
 	}
-	FallBack "Diffuse"
+	Fallback "Unlit/Texture"
 	CustomEditor "RhyFlatLitMMDEditor"
 }

@@ -294,13 +294,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 				
-				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation) / 2) * toonTexColor;
-				
-				#if defined(POINT)
-				{
-					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
-				}
-				#endif
+				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation)) * toonTexColor;
 				
 				if(light_Env != 1)
 					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
@@ -316,9 +310,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 		{
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
+			Blend [_SrcBlend] One
 
 			ZWrite On
 			ZTest LEqual
+			Cull Off
 
 			CGPROGRAM
 			#include "FlatLitToonShadows.cginc"
