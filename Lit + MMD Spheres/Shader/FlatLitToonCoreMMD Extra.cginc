@@ -44,6 +44,7 @@ uniform float4 _DefaultLightDir;
 uniform float _SpecularToggle;
 uniform float _Mode;
 uniform float _Opacity;
+uniform float _SpecularBleed;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 

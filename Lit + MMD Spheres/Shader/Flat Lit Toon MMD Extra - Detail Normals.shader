@@ -7,9 +7,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 		_ColorMask("ColorMask", 2D) = "black" {}
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
-		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 10)) = 1.0
+		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 500)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
-		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 10)) = 1.0
+		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 500)) = 1.0
 		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,2)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_ShadowTex("Shadow Texture", 2D) = "white" {}
@@ -28,7 +28,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 		_DetailMapMask("Detail Normal Map Mask", 2D) = "white" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		_SpecularToggle("Specular Toggle", Float) = 1
-		_Opacity("Opacity", Range(0,1)) = 0
+		_Opacity("Opacity", Range(1,0)) = 0
+		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -130,6 +131,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.r);
+				baseColor *= float4(i.col.rgb, 1);
 
 				float4 lightmap = float4(1.0,1.0,1.0,1.0);
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
@@ -178,22 +180,25 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 					maskedViewNormal.xy = mul(maskedViewNormal, rotationMatrix*faceSign);
 				}
 				
-				//float2 sphereUV = matcapSample(float3(0,1,0), viewDir, viewNormal);
+				float specularShadows = ((attenuation * .9) + _SpecularBleed);
+				if(specularShadows > 1)
+					specularShadows = 1;
+				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
-				float4 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
+				float3 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
 				float3 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * dot(shadowTexColor, grayscale_vector);
+				sphereAdd *= (sphereMap_var * _SphereAddIntensity) * specularShadows;
 				float3 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul *= _SphereMulIntensity;
 				
 				//float2 maskedSphereUV = matcapSample(float3(0,1,0), viewDir, maskedViewNormal);
 				float2 maskedSphereUV = maskedViewNormal.xy * 0.5 + 0.5;
 				float3 maskedSphereAdd = tex2D(_SphereAddTex, maskedSphereUV);
-				maskedSphereAdd *= (sphereMap_var.rgb * _SphereAddIntensity) * attenuation;
+				maskedSphereAdd *= (sphereMap_var.rgb * _SphereAddIntensity) * specularShadows;
 				float3 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
 				maskedSphereMul *= _SphereMulIntensity;
 				
-				float3 indirectLighting = ShadeSH9Minus + ((shadowTexColor + shadowTexColorDetail) * lightColor);
+				float3 indirectLighting = ShadeSH9Minus + (shadowTexColor * lightColor);
 				float3 directLighting = ShadeSH9Plus + lightColor;
 				
 				float finalAlpha = _MainTex_var.a;
@@ -202,10 +207,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 
-				float3 finalColor = emissive + (_ColorIntensity * baseColor * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * lerp(toonTexColor, toonTexColorDetail, 0.5);
-				
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, attenuation) * toonTexColor;
+
 				if(light_Env != 1)
-					finalColor = emissive + (_ColorIntensity * baseColor * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * lerp(toonTexColor, toonTexColorDetail, 0.5);
+					finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -236,6 +241,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
+			uniform sampler2D _DetailMap;
+			float4 _DetailMap_ST;
+			uniform sampler2D _DetailMapMask;
+			float4 _DetailMapMask_ST;
 
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
 			{
@@ -246,8 +255,13 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
+				float3 _DetailMap_var = UnpackNormal(tex2D(_DetailMap, TRANSFORM_TEX(i.uv0, _DetailMap)));
+				float3 _DetailMapMask_var = tex2D(_DetailMapMask ,TRANSFORM_TEX(i.uv0, _DetailMapMask));
+				_DetailMap_var *= _DetailMapMask_var.rgb;
+				float3 maskedNormalDirection = normalize(mul(float3(_BumpMap_var.xy*_DetailMap_var.z + _DetailMap_var.xy*_BumpMap_var.z, _BumpMap_var.z*_DetailMap_var.z), tangentTransform));
+				
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
-							
+				
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);	
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
 				float3 lightColor = _LightColor0.rgb;
@@ -299,6 +313,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				
 				// MMD Spheres
 				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
+				float3 maskedViewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, maskedNormalDirection));
 				
 				// position of shaded pixel in view space 0.0 to 1.0 X and Y
                 float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
@@ -311,14 +326,41 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float sinX = sin(cameraRoll);
 				float cosX = cos(cameraRoll);
 				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
-				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);				
+				
+				if(_SpecularToggle)
+				{
+					// vector perpendicular to both pixel normal and view vector
+					float3 viewCross = cross(viewDir, viewNormal);
+					float3 maskedViewCross = cross(viewDir, maskedViewNormal);
+					viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+					maskedViewNormal = float3(-maskedViewCross.y, maskedViewCross.x, 0.0);
+					
+					float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
+					float sinX = sin(cameraRoll);
+					float cosX = cos(cameraRoll);
+					float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
+					viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
+					maskedViewNormal.xy = mul(maskedViewNormal, rotationMatrix*faceSign);
+				}
+				
+				float specularShadows = ((attenuation * .9) + _SpecularBleed);
+				if(specularShadows > 1)
+					specularShadows = 1;
 				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float3 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * attenuation;
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
-				sphereMul.rgb *= _SphereMulIntensity;
+				float3 sphereAdd = tex2D(_SphereAddTex, sphereUV);
+				sphereAdd *= (sphereMap_var * _SphereAddIntensity) * specularShadows;
+				float3 sphereMul = tex2D(_SphereMulTex, sphereUV);
+				sphereMul *= _SphereMulIntensity;
+				
+				//float2 maskedSphereUV = matcapSample(float3(0,1,0), viewDir, maskedViewNormal);
+				float2 maskedSphereUV = maskedViewNormal.xy * 0.5 + 0.5;
+				float3 maskedSphereAdd = tex2D(_SphereAddTex, maskedSphereUV);
+				maskedSphereAdd *= (sphereMap_var.rgb * _SphereAddIntensity) * specularShadows;
+				float3 maskedSphereMul = tex2D(_SphereMulTex, maskedSphereUV);
+				maskedSphereMul *= _SphereMulIntensity;
 				
 				float finalAlpha = _MainTex_var.a;
 				if(_Mode == 1)
@@ -326,10 +368,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation)) * toonTexColor;
+				float3 finalColor = ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(0, directLighting, attenuation)) * toonTexColor;
 				
 				if(light_Env != 1)
-					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
+					finalColor = ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
 					
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

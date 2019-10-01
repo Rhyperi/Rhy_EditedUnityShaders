@@ -45,6 +45,7 @@ public class RhyFlatLitMMDEditorColor : ShaderGUI
     MaterialProperty speedY;
     MaterialProperty normalMap;
     MaterialProperty alphaCutoff;
+    MaterialProperty specularBleed;
 
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -74,6 +75,7 @@ public class RhyFlatLitMMDEditorColor : ShaderGUI
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
             alphaCutoff = FindProperty("_Cutoff", props);
+            specularBleed = FindProperty("_SpecularBleed", props);
         }
         
         Material material = materialEditor.target as Material;
@@ -120,6 +122,7 @@ public class RhyFlatLitMMDEditorColor : ShaderGUI
                     materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
                 EditorGUI.indentLevel -= 2;
                     materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
+                    materialEditor.ShaderProperty(specularBleed, "Specular Bleed Through", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
                     materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
                 GUILayout.Space(6);
@@ -139,6 +142,8 @@ public class RhyFlatLitMMDEditorColor : ShaderGUI
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
+                GUILayout.Space(20);
+                GUILayout.Label("Version: 1.8");
                 EditorGUI.BeginChangeCheck();
                 
                 

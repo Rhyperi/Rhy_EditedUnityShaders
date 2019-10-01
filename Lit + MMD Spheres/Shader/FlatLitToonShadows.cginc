@@ -58,6 +58,8 @@ void vertShadowCaster(VertexInput v,
     TRANSFER_SHADOW_CASTER_NOPOS(o, opos)
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         o.tex = TRANSFORM_TEX(v.uv0, _MainTex);
+		half alpha = tex.a;
+		clip(alpha - 100);
     #endif
 }
 
@@ -72,19 +74,14 @@ half4 fragShadowCaster(
 {
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         half alpha = tex2D(_MainTex, TRANSFORM_TEX(i.tex, _MainTex)).a;
-    #if defined(_ALPHATEST_ON)
         clip(alpha - _Cutoff);
     #endif
     #if defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
-        #if defined(UNITY_STANDARD_USE_DITHER_MASK)
             // Use dither mask for alpha blended shadows, based on pixel position xy
             // and alpha level. Our dither texture is 4x4x16.
             half alphaRef = tex3D(_DitherMaskLOD, float3(vpos.xy*0.25,alpha*0.9375)).a;
             clip(alphaRef - 0.01);
-            #else
-                clip(alpha - _Cutoff);
-            #endif
-        #endif
+            clip(alpha - _Cutoff);
     #endif
 
     SHADOW_CASTER_FRAGMENT(i)

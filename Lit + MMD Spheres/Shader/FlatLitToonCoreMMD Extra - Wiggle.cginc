@@ -46,6 +46,7 @@ uniform float4 _DefaultLightDir;
 uniform float _SpecularToggle;
 uniform float _Mode;
 uniform float _Opacity;
+uniform float _SpecularBleed;
 
 float _Noise;
 float _NoiseX;

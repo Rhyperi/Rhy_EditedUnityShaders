@@ -102,7 +102,7 @@ Rendering Mode:
 Similar to the basic shader, but has both support for normal maps and detail normal maps.
 	
 =Transparent Lit=
-Render Queue: Transparent-2
+Render Queue: Geometry+1
 Mainly to be used in cases where you have a semi-transparent object that still needs self-shadowing such as clothing.  *Make sure to use it in Cutout Render Mode!*
 
 =Transparent Unlit=
