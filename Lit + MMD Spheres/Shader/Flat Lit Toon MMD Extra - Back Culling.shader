@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic - Back Culling"
 {
 	Properties
 	{
@@ -25,13 +25,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
-		_NoiseTex("Noise Texture", 2D) = "white" {}
-		_NoiseMask("Noise Mask Texture", 2D) = "white" {}
-		_NoiseX("Noise X Multipler", Float) = 1.0
-		_NoiseY("Noise Y Multipler", Float) = 1.0
-		_NoiseZ("Noise Z Multipler", Float) = 1.0
-		_SpeedX2("Noise X speed", Float) = 1.0
-		_SpeedY2("Noise Y speed", Float) = 1.0
 		_Opacity("Opacity", Range(1,0)) = 0
 		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
 
@@ -42,13 +35,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
 		[HideInInspector] _ZWrite ("__zw", Float) = 1.0
 	}
-	
+
 	SubShader
 	{
 		Tags
 		{
 			"Queue"="Geometry"
 			"RenderType" = "Opaque"
+			//Test
 		}
 
 		Pass
@@ -60,10 +54,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 			ZWrite On
 			ZTest LEqual
 			LOD 200
-			Cull Off
-			
-			CGPROGRAM			
-			#include "FlatLitToonCoreMMD Extra - Wiggle.cginc"
+			Cull Back
+						
+			CGPROGRAM
+			#include "FlatLitToonCoreMMD Extra.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -120,7 +114,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.rgb);
-				//float3 baseColor = lerp(_MainTex_var.rgb, dot(_MainTex_var.rgb, float3(0.3, 0.59, 0.11)), _ColorIntensity) * _Color.rgb;
 				
 				float4 lightmap = float4(1.0,1.0,1.0,1.0);
 				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
@@ -132,11 +125,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				float3 ShadeSH9Minus = ShadeSH9(float4(0, 0, 0, 1));
 				
 				float bw_lightColor = dot(lightColor, grayscale_vector);
-				float bw_directLighting = dot(lightDirection, normalDirection) * bw_lightColor * attenuation + grayscaleSH9(normalDirection);
+				//float bw_directLighting = (dot(lightDirection, normalDirection) * 0) * bw_lightColor * attenuation + grayscaleSH9(normalDirection);
 				float bw_bottomIndirectLighting = dot(ShadeSH9Minus, grayscale_vector);
 				float bw_topIndirectLighting = dot(ShadeSH9Plus, grayscale_vector);
 				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
-				float3 directContribution = floor((bw_lightDifference) * 2.5);
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
 				float tempValue = (0.4 * dot(normalDirection, lightDirection.xyz) + 0.5);
@@ -214,7 +206,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
-
+			float2 emissionUV;
+			float2 emissionMovement;
+			
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
 			{
 				float faceSign = ( facing >= 0 ? 1 : -1 );
@@ -246,6 +240,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				
+				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
+				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
+				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
+				emissive.rgb *= emissionMask_var.rgb;
+				emissive.rgb *= _EmissionIntensity;
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float3 baseColor = lerp((_MainTex_var.rgb*_Color.rgb),_MainTex_var.rgb,_ColorMask_var.rgb);
@@ -309,7 +309,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 					finalAlpha -= _Opacity;
 				
 				float3 finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(0, directLighting, attenuation)) * toonTexColor;
-				
+								
 				if(light_Env != 1)
 					finalColor = ((_ColorIntensity * baseColor) * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
 
@@ -345,5 +345,5 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 		}
 	}
 	Fallback "Unlit/Texture"
-	CustomEditor "RhyFlatLitMMDEditorWiggle"
+	CustomEditor "RhyFlatLitMMDEditor"
 }

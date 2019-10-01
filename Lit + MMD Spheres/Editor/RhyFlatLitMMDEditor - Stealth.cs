@@ -207,6 +207,9 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
+
+                GUILayout.Space(20);
+                GUILayout.Label("Version: 1.8");
                 EditorGUI.BeginChangeCheck();
                 
                 

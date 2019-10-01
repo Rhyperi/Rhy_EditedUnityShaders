@@ -33,6 +33,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
+    MaterialProperty shadowTex;
     MaterialProperty defaultLightDir;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
@@ -49,6 +50,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
     MaterialProperty speedY2;
     MaterialProperty normalMap;
     MaterialProperty alphaCutoff;
+    MaterialProperty specularBleed;
 
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -66,6 +68,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
+            shadowTex = FindProperty("_ShadowTex", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
@@ -82,6 +85,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
             speedY2 = FindProperty("_SpeedY2", props);
             normalMap = FindProperty("_BumpMap", props);
             alphaCutoff = FindProperty("_Cutoff", props);
+            specularBleed = FindProperty("_SpecularBleed", props);
         }
         
         Material material = materialEditor.target as Material;
@@ -125,11 +129,13 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                     materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
                 EditorGUI.indentLevel -= 2;
                     materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
+                materialEditor.ShaderProperty(specularBleed, "Specular Bleed Through", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
                     materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
                 GUILayout.Space(6);
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Shadow Texture"), shadowTex);
                 materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
@@ -154,6 +160,8 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                 materialEditor.ShaderProperty(speedX2, new GUIContent("Noise X Scroll Speed"), 0);
                 materialEditor.ShaderProperty(speedY2, new GUIContent("Noise Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
+                GUILayout.Space(20);
+                GUILayout.Label("Version: 1.8");
                 EditorGUI.BeginChangeCheck();
                 
                 

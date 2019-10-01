@@ -7,9 +7,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 		_ColorMask("ColorMask", 2D) = "black" {}
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
-		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 500)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
-		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
+		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 500)) = 1.0
 		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_ShadowTex("Shadow Texture", 2D) = "white" {}
@@ -25,7 +25,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
-		_Opacity("Opacity", Range(0,1)) = 0
+		_Opacity("Opacity", Range(1,0)) = 0
+		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -157,10 +158,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
 				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
 				
+				float specularShadows = ((attenuation * .9) + _SpecularBleed);
+				if(specularShadows > 1)
+					specularShadows = 1;
+				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float3 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * attenuation;
+				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * specularShadows;
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 				
@@ -287,10 +292,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
 				viewNormal.xy = mul(viewNormal, rotationMatrix*faceSign);
 				
+				float specularShadows = ((attenuation * .9) + _SpecularBleed);
+				if(specularShadows > 1)
+					specularShadows = 1;
+				
 				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 				float3 sphereMap_var = tex2D(_SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap));
 				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * attenuation;
+				sphereAdd.rgb *= (sphereMap_var * _SphereAddIntensity) * specularShadows;
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 				
