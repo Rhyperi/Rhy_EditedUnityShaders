@@ -154,7 +154,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                     materialEditor.ShaderProperty(speedY2, new GUIContent("2nd Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.8");
+                GUILayout.Label("Version: 1.82 - 2x Emission");
                 EditorGUI.BeginChangeCheck();
                 
                 

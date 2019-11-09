@@ -163,8 +163,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
             
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
-				float3 emissive = (_EmissionMap_var.rgb*_EmissiveColor.rgb) + ((saturate((_PatternColor.rgb*saturate((1.0 - (node_1333*(node_1333-(0.0+(10.0*node_1162))))))))*_EmissiveIntensity)+(_PatternColor.rgb*node_8264));
+				float3 emissive = ((saturate((_PatternColor.rgb*saturate((1.0 - (node_1333*(node_1333-(0.0+(10.0*node_1162))))))))*_EmissiveIntensity)+(_PatternColor.rgb*node_8264));
 				emissive.rgb *= emissionMask_var.rgb;
+				
+				float3 baseEmissive = (_EmissionMap_var.rgb * _EmissionColor.rgb);					
+				baseEmissive.rgb *= emissionMask_var.rgb;
+				baseEmissive.rgb *= _EmissiveIntensity;
 				
 				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
@@ -207,7 +211,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
 				
 				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
+				float3 finalColor = baseEmissive + emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
 
 				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb * lightmap, finalColor * lightmap,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

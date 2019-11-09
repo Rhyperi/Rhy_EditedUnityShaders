@@ -129,7 +129,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.4 * dot(normalDirection, lightDirection.xyz) + 0.5);
+				float tempValue = (0.495 * dot(normalDirection, lightDirection) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
@@ -170,7 +170,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = emissive + (_ColorIntensity * baseColor * sphereMul + sphereAdd) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
+				float3 finalColor = emissive + (_ColorIntensity * baseColor * toonTexColor * (sphereMul + sphereAdd)) * (lerp(indirectLighting, directLighting, attenuation) / 2);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -187,6 +187,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				"LightMode" = "ForwardAdd"
 			}
 			Blend [_SrcBlend] One
+			ZWrite On
+			ZTest LEqual
+			LOD 200
+			Cull Off
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 
@@ -262,7 +266,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.4 * dot(normalDirection, lightDirection.xyz) + 0.5);
+				float tempValue = (0.5 * (normalDirection * lightDirection.xyz) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);

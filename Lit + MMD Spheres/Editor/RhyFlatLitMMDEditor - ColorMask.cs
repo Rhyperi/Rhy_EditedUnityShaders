@@ -143,7 +143,7 @@ public class RhyFlatLitMMDEditorColor : ShaderGUI
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.8");
+                GUILayout.Label("Version: 1.82 - Color Mask");
                 EditorGUI.BeginChangeCheck();
                 
                 

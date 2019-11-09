@@ -15,7 +15,9 @@
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform sampler2D _SphereAddTex; uniform float4 _SphereAddTex_ST;
+uniform sampler2D _SphereAddSubTex; uniform float4 _SphereAddSubTex_ST;
 uniform sampler2D _SphereMap; uniform float4 _SphereMap_ST;
+uniform sampler2D _SphereSubMap; uniform float4 _SphereSubMap_ST;
 uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
 uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
@@ -32,6 +34,7 @@ uniform float _SpeedX2; uniform float _SpeedY2;
 uniform float4 _Color; uniform float4 _rTint; uniform float4 _bTint; uniform float4 _gTint; 
 uniform float _ColorIntensity;
 uniform float _SphereAddIntensity;
+uniform float _SphereAddSubIntensity;
 uniform float _SphereMulIntensity;
 uniform float _Cutoff;
 uniform float4 _EmissionColor;
@@ -45,6 +48,7 @@ uniform float _SpecularToggle;
 uniform float _Mode;
 uniform float _Opacity;
 uniform float _SpecularBleed;
+uniform float _Fader;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 

@@ -40,7 +40,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 	{
 		Tags
 		{
-			"Queue" = "Geometry+1"
+			"Queue" = "Transparent-1"
 			"RenderType" = "Transparent"
 			"IgnoreProjector" = "True"
 		}
@@ -51,7 +51,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 			Tags { "LightMode" = "ForwardBase"}
 
 			Blend [_SrcBlend] [_DstBlend]
-			ZWrite On
+			ZWrite Off
 			ZTest LEqual
 			LOD 200
 			Cull Off
@@ -134,7 +134,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				float3 directContribution = saturate(1 + floor(saturate(bw_lightDifference) * 2.5));
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.4 * dot(normalDirection, lightDirection.xyz) + 0.5);
+				float tempValue = (0.5 * (normalDirection * lightDirection.xyz) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
@@ -195,6 +195,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				"LightMode" = "ForwardAdd"
 			}
 			Blend [_SrcBlend] One
+			ZWrite Off
+			ZTest LEqual 
+			LOD 200
+			Cull Off
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 
