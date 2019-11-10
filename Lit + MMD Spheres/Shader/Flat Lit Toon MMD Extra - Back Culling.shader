@@ -42,7 +42,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic - Back Culling"
 		{
 			"Queue"="Geometry"
 			"RenderType" = "Opaque"
-			//Test
 		}
 
 		Pass
@@ -192,6 +191,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic - Back Culling"
 				"LightMode" = "ForwardAdd"
 			}
 			Blend [_SrcBlend] One
+			ZWrite On
+			ZTest LEqual
+			LOD 200
+			Cull Back
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			
 

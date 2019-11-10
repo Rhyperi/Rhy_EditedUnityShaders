@@ -121,7 +121,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
 				
 				float NdL = dot(maskedNormalDirection, float4(lightDirection.xyz, 1));
-				float remappedRamp = 0.4 * NdL + 0.5;
+				float remappedRamp = 0.5 * NdL + 0.5;
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
@@ -150,9 +150,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3 directContribution = floor((bw_lightDifference) * 2.5);
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.5 * normalDirection + 0.5);				
+				float tempValue = (0.5 * dot(normalDirection, lightDirection.xyz) + 0.5);
+				float detailTempValue = (0.5 * dot(maskedNormalDirection, lightDirection.xyz) + 0.5);
 				
-				float3 toonTexColorDetail = tex2D( _ToonTex, tempValue);
+				float3 toonTexColorDetail = tex2D( _ToonTex, detailTempValue);
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float3 shadowTexColorDetail = tex2D(_ShadowTex, remappedRamp.xx * rampValue);
@@ -207,10 +208,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 
-				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, attenuation) * toonTexColor;
+				float3 finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * lerp(indirectLighting, directLighting, attenuation) * (toonTexColor * toonTexColorDetail);
 
 				if(light_Env != 1)
-					finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * toonTexColor;
+					finalColor = emissive + ((_ColorIntensity * baseColor) * lerp(sphereMul, maskedSphereMul, 0.5) + lerp(sphereAdd, maskedSphereAdd, 0.5)) * (lerp(indirectLighting, directLighting, attenuation) / 2) * (toonTexColor * toonTexColorDetail);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -308,7 +309,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.5 * normalDirection + 0.5);
+				float tempValue = (0.5 * dot(normalDirection, lightDirection.xyz) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);

@@ -139,7 +139,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				float3 directContribution = floor((bw_lightDifference) * 2.5);
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.5 * normalDirection + 0.5);
+				float tempValue = (0.5 * dot(normalDirection, lightDirection.xyz) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
@@ -271,7 +271,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
 				
 				float rampValue = smoothstep(0, bw_lightDifference, 0 - bw_bottomIndirectLighting);
-				float tempValue = (0.5 * normalDirection + 0.5);
+				float tempValue = (0.5 * dot(normalDirection, lightDirection.xyz) + 0.5);
 				
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
