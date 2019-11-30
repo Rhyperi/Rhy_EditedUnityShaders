@@ -83,6 +83,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
 				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
+				float finalAlpha = _MainTex_var.a;
 							
 				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);	
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
@@ -164,7 +165,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
 				sphereMul.rgb *= _SphereMulIntensity;
 				
-				float finalAlpha = _MainTex_var.a;
+				
 				if(_Mode == 1)
 					clip (finalAlpha - _Cutoff);
 				if(_Mode == 3)
@@ -340,6 +341,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 			#pragma vertex vertShadowCaster
 			#pragma fragment fragShadowCaster
+			
 			ENDCG
 		}
 	}
