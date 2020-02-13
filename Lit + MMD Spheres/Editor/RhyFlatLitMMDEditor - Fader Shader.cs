@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using publicVariables;
 
 public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 {
@@ -22,6 +23,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
     }
 
     MaterialProperty blendMode;
+	MaterialProperty cullMode;
     MaterialProperty mainTexture;
     MaterialProperty opacity;
     MaterialProperty color;
@@ -53,6 +55,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
     {
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
+			cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
             opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
@@ -90,6 +93,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
             {
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
                 var bMode = (BlendMode)blendMode.floatValue;
+				var cMode = (CullMode)cullMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
@@ -103,6 +107,12 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
                     {
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
+                }
+				cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Rendering Mode");
+                    cullMode.floatValue = (float)cMode;
                 }
 
                 EditorGUI.showMixedValue = false;
@@ -153,7 +163,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
                 materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.82 - Fader");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Fader");
                 EditorGUI.BeginChangeCheck();
 
 

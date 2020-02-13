@@ -27,7 +27,10 @@ uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _EmissionMap2; uniform float4 _EmissionMap2_ST;
 uniform sampler2D _EmissionMask2; uniform float4 _EmissionMask2_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
+uniform sampler2D _DetailMap; uniform float4 _DetailMap_ST;
 uniform sampler2D _NormalMask; uniform float4 _NormalMask_ST;
+uniform sampler2D inTexture; uniform float4 inTexture_ST;
+uniform sampler2D inNormal; uniform float4 inNormal_ST;
 
 uniform float _SpeedX; uniform float _SpeedY;
 uniform float _SpeedX2; uniform float _SpeedY2;
@@ -131,57 +134,4 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 	tristream.RestartStrip();
 }
-
-float2 matcapSample(float3 worldUp, float3 viewDirection, float3 normalDirection)
-{
-	half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
-	half3 worldViewRight = normalize(cross(viewDirection, worldViewUp));
-	half2 matcapUV = half2(dot(worldViewRight, normalDirection), dot(worldViewUp, normalDirection)) * 0.5 + 0.5;
-	return matcapUV;				
-}
-
-float3 VRViewPosition()
-{
-	#if defined(USING_STEREO_MATRICES)
-		float3 leftEye = unity_StereoWorldSpaceCameraPos[0];
-		float3 rightEye = unity_StereoWorldSpaceCameraPos[1];
-            
-		float3 centerEye = lerp(leftEye, rightEye, 0.5);
-    #else
-		float3 centerEye = _WorldSpaceCameraPos;
-    #endif
-    return centerEye;
-}
-
-float FadeShadows(float attenuation, float3 worldPosition)
-{
-    float viewZ = dot(_WorldSpaceCameraPos - worldPosition, UNITY_MATRIX_V[2].xyz);
-    float shadowFadeDistance = UnityComputeShadowFadeDistance(worldPosition, viewZ);
-    float shadowFade = UnityComputeShadowFade(shadowFadeDistance);
-    attenuation = saturate(attenuation + shadowFade);
-    return attenuation;
-}
-
-half3 GetSHLength()
-{
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
-}
-
-float3 ShadeSH9Normal(float3 normalDirection)
-{
-    return ShadeSH9(half4(normalDirection, 1.0));
-}
-
-float grayscaleSH9(float3 normalDirection)
-{
-	return dot(ShadeSH9(half4(normalDirection, 1.0)), grayscale_vector);
-}
-
 #endif

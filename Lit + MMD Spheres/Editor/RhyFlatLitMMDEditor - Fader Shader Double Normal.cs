@@ -2,15 +2,16 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using publicVariables;
 
-public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
+public class RhyFlatLitMMDEditorFaderShaderDoubleNormal : ShaderGUI
 {
 
-    public enum OutlineMode
+    public enum CullMode
     {
         None,
-        Tinted,
-        Colored
+        Front,
+        Back
     }
 
     public enum BlendMode
@@ -22,6 +23,7 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
     }
 
     MaterialProperty blendMode;
+    MaterialProperty cullMode;
     MaterialProperty mainTexture;
     MaterialProperty opacity;
     MaterialProperty color;
@@ -30,6 +32,9 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
     MaterialProperty sphereAddTexture;
     MaterialProperty sphereAddIntensity;
     MaterialProperty sphereAddMask;
+    MaterialProperty sphereAddSubTexture;
+    MaterialProperty sphereAddSubIntensity;
+    MaterialProperty sphereAddSubMask;
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
@@ -42,19 +47,16 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty normalMap;
+    MaterialProperty detailMap;
     MaterialProperty alphaCutoff;
     MaterialProperty specularBleed;
-    MaterialProperty BaseTextureX;
-    MaterialProperty BaseTextureY;
-    MaterialProperty WorkingUVX;
-    MaterialProperty WorkingUVY;
-    MaterialProperty TravelX;
-    MaterialProperty TravelY;
+	MaterialProperty fader;
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
+            cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
             opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
@@ -63,6 +65,9 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
             sphereAddTexture = FindProperty("_SphereAddTex", props);
             sphereAddIntensity = FindProperty("_SphereAddIntensity", props);
             sphereAddMask = FindProperty("_SphereMap", props);
+            sphereAddSubTexture = FindProperty("_SphereAddSubTex", props);
+            sphereAddSubIntensity = FindProperty("_SphereAddSubIntensity", props);
+            sphereAddSubMask = FindProperty("_SphereSubMap", props);
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
@@ -75,14 +80,10 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
+            detailMap = FindProperty("_DetailMap", props);
             alphaCutoff = FindProperty("_Cutoff", props);
             specularBleed = FindProperty("_SpecularBleed", props);
-            BaseTextureX = FindProperty("_TextureSizeX", props);
-            BaseTextureY = FindProperty("_TextureSizeY", props);
-            WorkingUVX = FindProperty("_UVX", props);
-            WorkingUVY = FindProperty("_UVY", props);
-            TravelX = FindProperty("_TravelX", props);
-            TravelY = FindProperty("_TravelY", props);
+			fader = FindProperty("_Fader", props);
         }
 
         Material material = materialEditor.target as Material;
@@ -93,7 +94,10 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
             EditorGUI.BeginChangeCheck();
             {
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
+                EditorGUI.showMixedValue = cullMode.hasMixedValue;
+
                 var bMode = (BlendMode)blendMode.floatValue;
+                var cMode = (CullMode)cullMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
@@ -108,17 +112,14 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
                 }
-
+                cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Rendering Mode");
+                    cullMode.floatValue = (float)cMode;
+                }
                 EditorGUI.showMixedValue = false;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
-                materialEditor.ShaderProperty(BaseTextureX, "Main Texture Width", 2);
-                materialEditor.ShaderProperty(BaseTextureY, "Main Texture Height", 2);
-                GUILayout.Space(3);
-                materialEditor.ShaderProperty(WorkingUVX, "Sprite Texture Width", 2);
-                materialEditor.ShaderProperty(WorkingUVY, "Sprite Texture Height", 2);
-                GUILayout.Space(3);
-                materialEditor.ShaderProperty(TravelX, "Texture Travel on X", 2);
-                materialEditor.ShaderProperty(TravelY, "Texture Travel on Y", 2);
                 EditorGUI.indentLevel += 2;
 
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
@@ -136,6 +137,12 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
                 materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask"), sphereAddMask);
                 EditorGUI.indentLevel -= 2;
                 materialEditor.ShaderProperty(sphereAddIntensity, "Intensity", 2);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Texture 2"), sphereAddSubTexture);
+                EditorGUI.indentLevel += 2;
+                materialEditor.TexturePropertySingleLine(new GUIContent("Additive Sphere Mask 2"), sphereAddSubMask);
+                EditorGUI.indentLevel -= 2;
+                materialEditor.ShaderProperty(sphereAddSubIntensity, "Intensity 2", 2);
+                GUILayout.Space(12);
                 materialEditor.ShaderProperty(specularBleed, "Specular Bleed Through", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Multiply Sphere Texture"), sphereMulTexture);
                 materialEditor.ShaderProperty(sphereMulIntensity, "Intensity", 2);
@@ -147,6 +154,9 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
                 materialEditor.TextureScaleOffsetProperty(normalMap);
+                GUILayout.Space(2);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Sub Normal Map - Matcap 2 Only", "Sub Normal Map"), detailMap);
+                materialEditor.TextureScaleOffsetProperty(detailMap);
                 GUILayout.Space(6);
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission"), emissionMap, emissionColor);
@@ -158,7 +168,7 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
                 materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.82");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Fader Extra");
                 EditorGUI.BeginChangeCheck();
 
 
@@ -196,30 +206,6 @@ public class RhyFlatLitMMDEditorSpriteSheet : ShaderGUI
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
-    }
-
-    public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
-    {
-        switch ((OutlineMode)material.GetFloat("_OutlineMode"))
-        {
-            case OutlineMode.None:
-                material.EnableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Tinted:
-                material.DisableKeyword("NO_OUTLINE");
-                material.EnableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Colored:
-                material.DisableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.EnableKeyword("COLORED_OUTLINE");
-                break;
-            default:
                 break;
         }
     }

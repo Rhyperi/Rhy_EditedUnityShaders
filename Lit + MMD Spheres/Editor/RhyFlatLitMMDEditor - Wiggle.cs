@@ -2,15 +2,16 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using publicVariables;
 
 public class RhyFlatLitMMDEditorWiggle : ShaderGUI
 {
 
-    public enum OutlineMode
+    public enum CullMode
     {
         None,
-        Tinted,
-        Colored
+        Front,
+        Back
     }
 
     public enum BlendMode
@@ -22,6 +23,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
     }
 
     MaterialProperty blendMode;
+    MaterialProperty cullMode;
     MaterialProperty mainTexture;
     MaterialProperty opacity;
     MaterialProperty color;
@@ -57,6 +59,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
     {
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
+            cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
             opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
@@ -96,7 +99,10 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
             EditorGUI.BeginChangeCheck();
             {
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
+                EditorGUI.showMixedValue = cullMode.hasMixedValue;
+
                 var bMode = (BlendMode)blendMode.floatValue;
+                var cMode = (CullMode)cullMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
@@ -111,6 +117,12 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
                 }
+                cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Rendering Mode");
+                    cullMode.floatValue = (float)cMode;
+                }
 
                 EditorGUI.showMixedValue = false;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
@@ -119,6 +131,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
                     materialEditor.ShaderProperty(opacity, "Opacity", 1);
+
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -161,7 +174,7 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                 materialEditor.ShaderProperty(speedY2, new GUIContent("Noise Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.82 - Wiggle");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Wiggle");
                 EditorGUI.BeginChangeCheck();
                 
                 
@@ -215,30 +228,6 @@ public class RhyFlatLitMMDEditorWiggle : ShaderGUI
                 material.DisableKeyword("_ALPHABLEND_ON");
                 material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
-    }
-
-    public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
-    {
-        switch ((OutlineMode)material.GetFloat("_OutlineMode"))
-        {
-            case OutlineMode.None:
-                material.EnableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Tinted:
-                material.DisableKeyword("NO_OUTLINE");
-                material.EnableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Colored:
-                material.DisableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.EnableKeyword("COLORED_OUTLINE");
-                break;
-            default:
                 break;
         }
     }

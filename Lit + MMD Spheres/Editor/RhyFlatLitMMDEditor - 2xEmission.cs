@@ -2,15 +2,15 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using publicVariables;
 
 public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
 {
-
-    public enum OutlineMode
+    public enum CullMode
     {
         None,
-        Tinted,
-        Colored
+        Front,
+        Back
     }
 
     public enum BlendMode
@@ -22,6 +22,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     }
 
     MaterialProperty blendMode;
+    MaterialProperty cullMode;
     MaterialProperty mainTexture;
     MaterialProperty opacity;
     MaterialProperty color;
@@ -33,6 +34,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
+    MaterialProperty shadowTex;
     MaterialProperty defaultLightDir;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
@@ -55,6 +57,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     {
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
+            cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
             opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
@@ -66,6 +69,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
+            shadowTex = FindProperty("_ShadowTex", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
@@ -92,7 +96,10 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
             EditorGUI.BeginChangeCheck();
             {
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
+                EditorGUI.showMixedValue = cullMode.hasMixedValue;
+
                 var bMode = (BlendMode)blendMode.floatValue;
+                var cMode = (CullMode)cullMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
@@ -107,14 +114,22 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
                 }
+                cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Rendering Mode");
+                    cullMode.floatValue = (float)cMode;
+                }
 
                 EditorGUI.showMixedValue = false;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
                 EditorGUI.indentLevel += 2;          
+
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
                     materialEditor.ShaderProperty(opacity, "Opacity", 1);
+
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -131,6 +146,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 GUILayout.Space(6);
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Shadow Texture"), shadowTex);
                 materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
@@ -154,7 +170,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                     materialEditor.ShaderProperty(speedY2, new GUIContent("2nd Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.82 - 2x Emission");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - 2x Emission");
                 EditorGUI.BeginChangeCheck();
                 
                 
@@ -174,19 +190,13 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
                 material.SetInt("_ZWrite", 1);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = -1;
                 break;
             case BlendMode.Cutout:
                 material.SetOverrideTag("RenderType", "TransparentCutout");
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 material.SetInt("_ZWrite", 1);
-                material.EnableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
                 break;
             case BlendMode.Fade:
@@ -194,9 +204,6 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 break;
             case BlendMode.Transparent:
@@ -204,34 +211,7 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
                 material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                break;
-        }
-    }
-
-    public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
-    {
-        switch ((OutlineMode)material.GetFloat("_OutlineMode"))
-        {
-            case OutlineMode.None:
-                material.EnableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Tinted:
-                material.DisableKeyword("NO_OUTLINE");
-                material.EnableKeyword("TINTED_OUTLINE");
-                material.DisableKeyword("COLORED_OUTLINE");
-                break;
-            case OutlineMode.Colored:
-                material.DisableKeyword("NO_OUTLINE");
-                material.DisableKeyword("TINTED_OUTLINE");
-                material.EnableKeyword("COLORED_OUTLINE");
-                break;
-            default:
                 break;
         }
     }
