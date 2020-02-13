@@ -16,6 +16,7 @@ uniform sampler2D _SphereMap; uniform float4 _SphereMap_ST;
 uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
+uniform sampler2D _ShadowTex; uniform float4 _ShadowTex_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
@@ -30,6 +31,9 @@ uniform float4 _EmissionColor;
 uniform float _outline_width;
 uniform float4 _outline_color;
 uniform float4 _DefaultLightDir;
+uniform float _Mode;
+uniform float _Opacity;
+uniform float _SpecularBleed;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
@@ -116,11 +120,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	}
 
 	tristream.RestartStrip();
-}
-
-float grayscaleSH9(float3 normalDirection)
-{
-	return dot(ShadeSH9(half4(normalDirection, 1.0)), grayscale_vector);
 }
 
 #endif

@@ -14,6 +14,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 5)) = 1.0
 		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
+		_ShadowTex("Shadow Texture", 2D) = "white" {}
 		_EmissionMap("Emission Map", 2D) = "white" {}
 		_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		_EmissiveIntensity ("EmissiveIntensity", Float ) = 1
@@ -28,6 +29,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 		_PatternColor ("Pattern Color", Color) = (1,1,1,1)
         _PatternSpeed ("PatternSpeed", Float ) = 0.1
         _PatternScale ("PatternScale", Float ) = 1
+		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
+		_Opacity("Opacity", Range(1,0)) = 0
+		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
         [MaterialToggle] _StartTopBottom ("StartTop/Bottom", Float ) = 1
         [MaterialToggle] _VisibleEffect ("VisibleEffect", Float ) = 0
         _VisibleEffectIntensity ("VisibleEffectIntensity", Float ) = 1
@@ -42,6 +46,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
+		[HideInInspector] _Cull ("__cull", Float) = 0.0
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
 		[HideInInspector] _SrcBlend ("__src", Float) = 1.0
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
@@ -52,7 +57,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 	{
 		Tags
 		{
-            "Queue" = "Transparent"
+            "Queue" = "Transparent-1"
             "RenderType" = "Transparent"
 		}
 
@@ -65,11 +70,13 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 
 			Blend [_SrcBlend] [_DstBlend]
 			ZWrite On
+			ZTest LEqual
 			LOD 200
-			Cull Off
+			Cull [_Cull]
 
 			CGPROGRAM
 			#include "FlatLitToonCore MMD + Stealth.cginc"
+			#include "RhyShaderHelperFunction.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -101,9 +108,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 			
 			uniform float2 emissionUV;
 			uniform float2 emissionMovement;
+			LightContainer Lighting;
+			MatcapContainer Matcap;
 			
-			float4 frag(VertexOutput i) : COLOR
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
 			{
+				float faceSign = ( facing >= 0 ? 1 : -1 );
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
@@ -113,13 +123,12 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				i.screenPos = float4( i.screenPos.xy / i.screenPos.w, 0, 0 );
                 i.screenPos.y *= _ProjectionParams.x;
 				
-				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 				float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap, TRANSFORM_TEX(i.uv0, _BumpMap)));
-				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float4 _MainTex_var = tex2D(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex));
+				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
+				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform);
+				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);		
 				
-				float node_7877 = _MainTex_var.a;
+				float node_7877 = baseColor.a;
                 float4 node_3326 = _Time + _TimeEditor;
                 float node_6088 = (node_3326.g*_PatternSpeed);
                 float node_3784 = (0.1*_PatternScale);
@@ -141,20 +150,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
                 float2 sceneUVs = i.screenPos.xy*0.5+0.5 + (_RefractionAndPattern * ((node_7877*0.5)*saturate((clamp(((node_9778*(0.1*_RefractionIntensity))*saturate((node_9302+(node_3485+2.0)))),0,1)+saturate((node_9984*(_MinVisibility*0.1))))).rr));
                 float4 sceneColor = tex2D(Refraction, UnityStereoTransformScreenSpaceTex(sceneUVs));
 				
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				if( light_Env != 1)
-				{
-						lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-					
-						if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-						{
-							lightDirection = normalize(_DefaultLightDir.xyz);
-						}
-				}
-				
-				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+
+				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation);
 				
 				float node_1333 = (1.0 - ((10.0*node_9302)+node_9778+(((node_9984*0.1)+node_3485)*10.0+-5.0)));
                 float node_1162 = (node_3485+node_9778+node_9302);
@@ -170,50 +169,27 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 				baseEmissive.rgb *= emissionMask_var.rgb;
 				baseEmissive.rgb *= _EmissiveIntensity;
 				
-				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-				baseColor *= float4(i.col.rgb, 1);
+				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
+				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.5);
+				float3 toonTexColor = tex2D(_ToonTex, tempValue);
+				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 
-				// MMD Spheres
-				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
-				
-				// position of shaded pixel in view space 0.0 to 1.0 X and Y
-                float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
+				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
-                // vector perpendicular to both pixel normal and view vector
-                float3 viewCross = cross(viewDir, viewNormal);
-                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
-				
-				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
-				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, UnityStereoTransformScreenSpaceTex(sphereUV));
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, UnityStereoTransformScreenSpaceTex(sphereUV));
-				sphereMul.rgb *= _SphereMulIntensity;
-			
-				float3 lightmap = float4(1.0,1.0,1.0,1.0);
-				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
+				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
+				Matcap.Mul.rgb *= _SphereMulIntensity;
 
-				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
-				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
-				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
+				float finalAlpha = baseColor.a;
 
-				normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); 
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
+				if(_Mode == 3)
+					finalAlpha -= _Opacity;
 
-				float grayscaleDirectLighting = dot(lightDirection, normalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(normalDirection);
+				float3 finalColor = (baseEmissive + emissive) + ((_ColorIntensity / 2) * baseColor.rgb * toonTexColor * (Matcap.Mul + Matcap.Add)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
-				float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
-				float remappedLight = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
-
-				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
-				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
-				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
-				
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = baseEmissive + emissive + ((_ColorIntensity * baseColor * sphereMul + sphereAdd)) * lerp(indirectLighting, directLighting, directContribution) * toonTexColor.rgb;
-
-				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb * lightmap, finalColor * lightmap,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
+				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb, finalColor,(node_7877*saturate(((node_2121*1.0)+node_8264)))), finalAlpha)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -225,9 +201,15 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
+			ZWrite On
+			ZTest LEqual
+			LOD 200
+			Cull [_Cull]
+			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 
 			CGPROGRAM
 			#include "FlatLitToonCore MMD + Stealth.cginc"
+			#include "RhyShaderHelperFunction.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -265,24 +247,29 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
             uniform float _PBREmissiveIntensity;
 			uniform float _RefractionAndPattern;
 			
-			float4 frag(VertexOutput i) : COLOR
-			{			
+			float2 emissionUV;
+			float2 emissionMovement;
+			LightContainer Lighting;
+			MatcapContainer Matcap;
+			
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
+			{
+				float faceSign = ( facing >= 0 ? 1 : -1 );
+				emissionUV = i.uv0;
+				emissionUV.x += _Time.x * _SpeedX;
+				emissionUV.y += _Time.x * _SpeedY;
+			
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
-				#if UNITY_UV_STARTS_AT_TOP
-                    float grabSign = -_ProjectionParams.x;
-                #else
-                    float grabSign = _ProjectionParams.x;
-                #endif
 				i.normalDir = normalize(i.normalDir);
 				i.screenPos = float4( i.screenPos.xy / i.screenPos.w, 0, 0 );
                 i.screenPos.y *= _ProjectionParams.x;
-				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-				float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
-				float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
-				float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-				float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 				
-				float node_7877 = _MainTex_var.a;
+				float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
+				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
+				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform);
+				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);		
+				
+				float node_7877 = baseColor.a;
                 float4 node_3326 = _Time + _TimeEditor;
                 float node_6088 = (node_3326.g*_PatternSpeed);
                 float node_3784 = (0.1*_PatternScale);
@@ -301,62 +288,40 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
                 float node_9778 = clamp(node_9984,0,1);
                 float node_9302 = (lerp( i.uv1.g, normalize((i.posWorld.rgb-objPos.rgb)).rgb.g, _TriplanarUV2 )*lerp( 1.0, (-1.0), _StartTopBottom ));
                 float node_3485 = (1.0 - ((_Stealth*3.0+-1.5)*_StealthScale));
-                float2 sceneUVs = float2(1,grabSign)*i.screenPos.xy*0.5+0.5 + (_RefractionAndPattern * ((node_7877*0.5)*saturate((clamp(((node_9778*(0.1*_RefractionIntensity))*saturate((node_9302+(node_3485+2.0)))),0,1)+saturate((node_9984*(_MinVisibility*0.1))))).rr));
+                float2 sceneUVs = i.screenPos.xy*0.5+0.5 + (_RefractionAndPattern * ((node_7877*0.5)*saturate((clamp(((node_9778*(0.1*_RefractionIntensity))*saturate((node_9302+(node_3485+2.0)))),0,1)+saturate((node_9984*(_MinVisibility*0.1))))).rr));
                 float4 sceneColor = tex2D(Refraction, UnityStereoTransformScreenSpaceTex(sceneUVs));
 				
-				float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
-				float3 lightColor = _LightColor0.rgb;
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
 
+				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation);
+				
 				float node_1333 = (1.0 - ((10.0*node_9302)+node_9778+(((node_9984*0.1)+node_3485)*10.0+-5.0)));
                 float node_1162 = (node_3485+node_9778+node_9302);
                 float node_2121 = saturate(node_1162);
                 float node_8264 = (lerp( 0.0, (pow(1.0-max(0,dot(normalDirection, viewDirection)),5.0)*3.0*(1.0 - node_2121)), _VisibleEffect )*_VisibleEffectIntensity);
-				
-				float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
-				float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
-				baseColor *= float4(i.col.rgb, 1);
 
-				// MMD Spheres
-				float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, normalDirection));
-				
-				// position of shaded pixel in view space 0.0 to 1.0 X and Y
-                float3 viewDir = normalize(UnityWorldToViewPos(i.posWorld));
+				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
+				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.5);
+				float3 toonTexColor = tex2D(_ToonTex, tempValue);
+				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 
-                // vector perpendicular to both pixel normal and view vector
-                float3 viewCross = cross(viewDir, viewNormal);
-                viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
-				
-				float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
-				float4 sphereMap_var = tex2D(_SphereMap,TRANSFORM_TEX(i.uv0, _SphereMap));
-				float4 sphereAdd = tex2D(_SphereAddTex, sphereUV);
-				sphereAdd.rgb *= (sphereMap_var.rgb * _SphereAddIntensity );
-				float4 sphereMul = tex2D(_SphereMulTex, sphereUV);
-				sphereMul.rgb *= _SphereMulIntensity;
-				
-				float3 lightmap = float4(1.0,1.0,1.0,1.0);
-				float3 reflectionMap = DecodeHDR(UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normalize((_WorldSpaceCameraPos - objPos.rgb)), 7), unity_SpecCube0_HDR)* 0.02;
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
+				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
-				float grayscalelightcolor = dot(_LightColor0.rgb, grayscale_vector);
-				float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
-				float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
+				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
+				Matcap.Mul.rgb *= _SphereMulIntensity;
 
-				normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); 
+				float finalAlpha = baseColor.a;
 
-				float grayscaleDirectLighting = dot(lightDirection, normalDirection)*grayscalelightcolor*attenuation + grayscaleSH9(normalDirection);
+				if(_Mode == 1)
+					clip (finalAlpha - _Cutoff);
+				if(_Mode == 3)
+					finalAlpha -= _Opacity;
 
-				float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
-				float remappedLight = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
+				float3 finalColor = (((_ColorIntensity / 2) * baseColor.rgb * toonTexColor * (Matcap.Mul + Matcap.Add))) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
-				float3 indirectLighting = saturate((ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)) + reflectionMap));
-				float3 directLighting = saturate((ShadeSH9(half4(0.0, 1.0, 0.0, 1.0)) + reflectionMap + _LightColor0.rgb));
-				float3 directContribution = saturate((1.0 - 0.0) + floor(saturate(remappedLight) * 2.0));
-				float tempValue = 0.48 * dot(normalDirection, lightDirection) + 0.5;
-				
-				float4 toonTexColor = tex2D(_ToonTex, TRANSFORM_TEX(float2(tempValue,tempValue), _ToonTex));
-				float3 finalColor = baseColor * lerp(0, _LightColor0.rgb, saturate((directContribution * toonTexColor.rgb) + attenuation));
-				
-				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb, finalColor,(node_7877*saturate(((node_2121*1.0)+node_8264)))), baseColor.a)
+				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb, finalColor,(node_7877*saturate(((node_2121*1.0)+node_8264)))), finalAlpha)
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -367,17 +332,24 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 		{
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
+			Blend [_SrcBlend] [_DstBlend]
 
-			ZWrite On ZTest LEqual
+			ZWrite On
+			ZTest LEqual
+			Cull Off
 
 			CGPROGRAM
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonShadows.cginc"
 			
 			#pragma multi_compile_shadowcaster
+			#pragma fragmentoption ARB_precision_hint_fastest
+
+			#pragma only_renderers d3d11 glcore gles
+			#pragma target 4.0
 
 			#pragma vertex vertShadowCaster
 			#pragma fragment fragShadowCaster
+			
 			ENDCG
 		}
 	}

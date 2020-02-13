@@ -55,27 +55,6 @@ float _NoiseZ;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
-float2 matcapSample(float3 worldUp, float3 viewDirection, float3 normalDirection)
-{
-	half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
-	half3 worldViewRight = normalize(cross(viewDirection, worldViewUp));
-	half2 matcapUV = half2(dot(worldViewRight, normalDirection), dot(worldViewUp, normalDirection)) * 0.5 + 0.5;
-	return matcapUV;				
-}
-
-float3 VRViewPosition()
-{
-	#if defined(USING_STEREO_MATRICES)
-		float3 leftEye = unity_StereoWorldSpaceCameraPos[0];
-		float3 rightEye = unity_StereoWorldSpaceCameraPos[1];
-            
-		float3 centerEye = lerp(leftEye, rightEye, 0.5);
-    #else
-		float3 centerEye = _WorldSpaceCameraPos;
-    #endif
-    return centerEye;
-}
-
 struct v2g
 {
 	float4 vertex : POSITION;
@@ -165,36 +144,5 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	}
 
 	tristream.RestartStrip();
-}
-
-float FadeShadows(float attenuation, float3 worldPosition)
-{
-    float viewZ = dot(_WorldSpaceCameraPos - worldPosition, UNITY_MATRIX_V[2].xyz);
-    float shadowFadeDistance = UnityComputeShadowFadeDistance(worldPosition, viewZ);
-    float shadowFade = UnityComputeShadowFade(shadowFadeDistance);
-    attenuation = saturate(attenuation + shadowFade);
-    return attenuation;
-}
-
-half3 GetSHLength()
-{
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
-}
-
-float3 ShadeSH9Normal(float3 normalDirection)
-{
-    return ShadeSH9(half4(normalDirection, 1.0));
-}
-
-float grayscaleSH9(float3 normalDirection)
-{
-	return dot(ShadeSH9(half4(normalDirection, 1.0)), grayscale_vector);
 }
 #endif

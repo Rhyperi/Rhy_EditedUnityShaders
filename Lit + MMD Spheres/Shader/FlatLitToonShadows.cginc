@@ -11,6 +11,7 @@ uniform float4      _Color;
 uniform float       _Cutoff;
 uniform sampler2D   _MainTex;
 uniform float4      _MainTex_ST;
+uniform float		_Mode;
 
 struct VertexInput
 {
@@ -52,7 +53,6 @@ half4 fragShadowCaster
 ) : SV_Target
 {
 	half alpha = tex2D(_MainTex, TRANSFORM_TEX(i.tex, _MainTex)).a;
-    clip(alpha - _Cutoff);
 	
     SHADOW_CASTER_FRAGMENT(i)
 }

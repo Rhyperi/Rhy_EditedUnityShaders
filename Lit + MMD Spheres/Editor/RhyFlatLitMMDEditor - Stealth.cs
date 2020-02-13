@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
+using publicVariables;
 
 public class RhyFlatLitMMDEditorStealth : ShaderGUI
 {
@@ -29,11 +30,11 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
         }
     }
 
-    public enum OutlineMode
+    public enum CullMode
     {
         None,
-        Tinted,
-        Colored
+        Front,
+        Back
     }
 
     public enum BlendMode
@@ -46,7 +47,9 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
   
 
     MaterialProperty blendMode;
+    MaterialProperty cullMode;
     MaterialProperty mainTexture;
+    MaterialProperty opacity;
     MaterialProperty color;
     MaterialProperty colorMask;
     MaterialProperty colIntensity;
@@ -56,6 +59,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     MaterialProperty sphereMulTexture;
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
+    MaterialProperty shadowTex;
     MaterialProperty defaultLightDir;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
@@ -85,7 +89,9 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     {
         { //Find Properties
             blendMode = FindProperty("_Mode", props);
+            cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
+            opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
             colorMask = FindProperty("_ColorMask", props);
             colIntensity = FindProperty("_ColorIntensity", props);
@@ -95,6 +101,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             sphereMulTexture = FindProperty("_SphereMulTex", props);
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
+            shadowTex = FindProperty("_ShadowTex", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
@@ -129,7 +136,10 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             EditorGUI.BeginChangeCheck();
             {
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
+                EditorGUI.showMixedValue = cullMode.hasMixedValue;
+
                 var bMode = (BlendMode)blendMode.floatValue;
+                var cMode = (CullMode)cullMode.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
@@ -144,12 +154,21 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                         SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
                     }
                 }
-      
+                cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Rendering Mode");
+                    cullMode.floatValue = (float)cMode;
+                }
+
                 EditorGUI.showMixedValue = false;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
-                EditorGUI.indentLevel += 2;          
+                EditorGUI.indentLevel += 2;
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
                     materialEditor.ShaderProperty(alphaCutoff, "Alpha Cutoff", 2);
+                if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Transparent)
+                    materialEditor.ShaderProperty(opacity, "Opacity", 1);
+
                 materialEditor.ShaderProperty(colIntensity, "Color Intensity", 2);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Color Mask", "Masks Color Tinting"), colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -190,6 +209,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
 
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Shadow Texture"), shadowTex);
                 materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
                 GUILayout.Space(6);
 
@@ -209,7 +229,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 EditorGUI.indentLevel -= 2;
 
                 GUILayout.Space(20);
-                GUILayout.Label("Version: 1.8");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Stealth");
                 EditorGUI.BeginChangeCheck();
                 
                 
