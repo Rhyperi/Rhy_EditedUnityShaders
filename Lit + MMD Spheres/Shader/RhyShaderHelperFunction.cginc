@@ -81,27 +81,29 @@ float grayscaleSH9(float3 normalDirection)
 	return dot(ShadeSH9(half4(normalDirection, 1.0)), grayscale_vector);
 }
 
-LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, float inAttenuation)
+float4 calculateColor(float4 inLight)
+{
+	float4 color;
+	float3 colorCalculatedForThisFragment = float3(1,1,1);
+	color.rgb = colorCalculatedForThisFragment * inLight;
+	color.a = 1;
+	return color;
+}
+
+LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, float inAttenuation, float inMin, float inMax)
 {
 	LightContainer returnLight;
 	float3 lightDirection = normalize(inLight.xyz);	
 	float light_Env = float(any(inLight.xyz));
-	float3 lightColor = inColor.rgb;
+	float4 lightColor = inColor;
 	float3 indirectDiffuse = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-				
-	#if !defined(POINT) && !defined(SPOT) && !defined(VERTEXLIGHT_ON) // if the average length of the light probes is null, and we don't have a directional light in the scene, fall back to our fallback lightDir
-		if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0 && length(lightDirection) < 0.1)
-		{
-			lightDirection = normalize(_DefaultLightDir);
-		}
-	#endif
-				
+	
 	if(light_Env != 1)
 	{
-		lightColor = indirectDiffuse.xyzz;
-		lightDirection = normalize(_DefaultLightDir);
+			lightDirection = normalize(_DefaultLightDir);
+			lightColor.rgb = indirectDiffuse;
 	}
-
+				
 	float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 	float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
 	float colorIndirectLighting = dot(lightDirection, inNormal) * lightColor * inAttenuation + grayscaleSH9(inNormal);
@@ -112,6 +114,8 @@ LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, f
 	float bw_bottomIndirectLighting = dot(ShadeSH9Minus, grayscale_vector);
 	float bw_topIndirectLighting = dot(ShadeSH9Plus, grayscale_vector);
 	float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
+
+	lightColor = clamp(lightColor, inMin, inMax);
 
 	float3 indirectLighting = ShadeSH9Minus;
 	float3 directLighting = ShadeSH9Plus + lightColor;

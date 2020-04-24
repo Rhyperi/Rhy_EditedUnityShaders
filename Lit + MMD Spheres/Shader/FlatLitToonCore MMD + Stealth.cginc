@@ -17,6 +17,7 @@ uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _ShadowTex; uniform float4 _ShadowTex_ST;
+uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
@@ -34,6 +35,7 @@ uniform float4 _DefaultLightDir;
 uniform float _Mode;
 uniform float _Opacity;
 uniform float _SpecularBleed;
+uniform float _ClampMin, _ClampMax;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
@@ -82,10 +84,9 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 screenPos : TEXCOORD6;
+	SHADOW_COORDS(7)
 	float4 col : COLOR;
 	bool is_outline : IS_OUTLINE;
-	SHADOW_COORDS(6)
-	UNITY_FOG_COORDS(7)
 };
 
 [maxvertexcount(6)]
@@ -109,11 +110,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
 		o._ShadowCoord = IN[ii]._ShadowCoord;
-		#endif
-
-		// Pass-through the fog coordinates if this pass has shadows.
-		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-		o.fogCoord = IN[ii].fogCoord;
 		#endif
 
 		tristream.Append(o);

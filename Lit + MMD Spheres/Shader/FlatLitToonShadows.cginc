@@ -45,9 +45,7 @@ void vertShadowCaster(VertexInput v,
 half4 fragShadowCaster
 (
     VertexOutputShadowCaster i
-    #ifdef UNITY_STANDARD_USE_DITHER_MASK
         , UNITY_VPOS_TYPE vpos : VPOS
-    #endif
 	
 	
 ) : SV_Target

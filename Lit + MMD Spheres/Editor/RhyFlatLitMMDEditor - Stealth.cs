@@ -60,6 +60,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     MaterialProperty sphereMulIntensity;
     MaterialProperty toonTex;
     MaterialProperty shadowTex;
+    MaterialProperty shadowMask;
     MaterialProperty defaultLightDir;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
@@ -71,6 +72,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     MaterialProperty alphaCutoff;
     MaterialProperty stealth;
     MaterialProperty stealthScale;
+    MaterialProperty stealthMask;
     MaterialProperty pattern;
     MaterialProperty patternColor;
     MaterialProperty patternSpeed;
@@ -83,7 +85,8 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
     MaterialProperty triplanarUV2;
     MaterialProperty patternTriplanarUV2;
     MaterialProperty refractionAndPattern;
-
+    MaterialProperty clampMin;
+    MaterialProperty clampMax;
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
@@ -102,6 +105,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             sphereMulIntensity = FindProperty("_SphereMulIntensity", props);
             toonTex = FindProperty("_ToonTex", props);
             shadowTex = FindProperty("_ShadowTex", props);
+            shadowMask = FindProperty("_ShadowMask", props);
             defaultLightDir = FindProperty("_DefaultLightDir", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
@@ -113,6 +117,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             alphaCutoff = FindProperty("_Cutoff", props);
             stealth = FindProperty("_Stealth", props);
             stealthScale = FindProperty("_StealthScale", props);
+            stealthMask = FindProperty("_StealthMask", props);
             pattern = FindProperty("_Pattern", props);
             patternColor = FindProperty("_PatternColor", props);
             patternSpeed = FindProperty("_PatternSpeed", props);
@@ -125,6 +130,8 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
             triplanarUV2 = FindProperty("_TriplanarUV2", props);
             patternTriplanarUV2 = FindProperty("_PatternTriplanarUV1", props);
             refractionAndPattern = FindProperty("_RefractionAndPattern", props);
+            clampMin = FindProperty("_ClampMin", props);
+            clampMax = FindProperty("_ClampMax", props);
         }
         
         Material material = materialEditor.target as Material;
@@ -162,6 +169,12 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 }
 
                 EditorGUI.showMixedValue = false;
+                GUILayout.Space(4);
+                GUILayout.Label("Minimum Light Intensity");
+                materialEditor.ShaderProperty(clampMin, "", 2);
+                GUILayout.Label("Maximum Light Intensity");
+                materialEditor.ShaderProperty(clampMax, "", 2);
+                GUILayout.Space(8);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Main Texture", "Main Color Texture"), mainTexture, color);
                 EditorGUI.indentLevel += 2;
                 if ((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout)
@@ -190,6 +203,7 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 GUILayout.Space(3);
                 ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), topBottom, "Scroll From Top?", materialEditor);
                 ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), visibleEffect, "Have Visible Effect?", materialEditor);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Stealth Mask", "Stealth Pattern Mask"), stealthMask);
                 EditorGUI.indentLevel += 2;
                 materialEditor.ShaderProperty(visibleEffectIntensity, new GUIContent("Visible Effect Intensity"), 0);
                 materialEditor.ShaderProperty(minVisibility, new GUIContent("Minimum Visibility"), 0);
@@ -210,6 +224,9 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
                 GUILayout.Label("-Toon Ramp-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Toon Texture"), toonTex);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Shadow Texture"), shadowTex);
+                EditorGUI.indentLevel += 2;
+                materialEditor.TexturePropertySingleLine(new GUIContent("Shadow Mask"), shadowMask);
+                EditorGUI.indentLevel -= 2;
                 materialEditor.VectorProperty(defaultLightDir, "Default Light Direction");
                 GUILayout.Space(6);
 
@@ -245,44 +262,24 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
         switch ((BlendMode)material.GetFloat("_Mode"))
         {
             case BlendMode.Opaque:
-                material.SetOverrideTag("RenderType", "");
+                material.SetOverrideTag("RenderType", "Opaque");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetInt("_ZWrite", 1);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.renderQueue = -1;
                 break;
             case BlendMode.Cutout:
                 material.SetOverrideTag("RenderType", "TransparentCutout");
-                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetInt("_ZWrite", 1);
-                material.EnableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 break;
             case BlendMode.Fade:
                 material.SetOverrideTag("RenderType", "Transparent");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.EnableKeyword("_ALPHABLEND_ON");
-                material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 break;
             case BlendMode.Transparent:
                 material.SetOverrideTag("RenderType", "Transparent");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_ZWrite", 0);
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.DisableKeyword("_ALPHABLEND_ON");
-                material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
-                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                 break;
         }
     }

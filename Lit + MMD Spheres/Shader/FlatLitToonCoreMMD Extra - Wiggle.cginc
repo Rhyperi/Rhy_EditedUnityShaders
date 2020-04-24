@@ -20,6 +20,7 @@ uniform sampler2D _MultiMap; uniform float4 _MultiMap_ST;
 uniform sampler2D _SphereMulTex; uniform float4 _SphereMulTex_ST;
 uniform sampler2D _ToonTex; uniform float4 _ToonTex_ST;
 uniform sampler2D _ShadowTex; uniform float4 _ShadowTex_ST;
+uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _EmissionMask; uniform float4 _EmissionMask_ST;
 uniform sampler2D _EmissionMap2; uniform float4 _EmissionMap2_ST;
@@ -47,6 +48,8 @@ uniform float _SpecularToggle;
 uniform float _Mode;
 uniform float _Opacity;
 uniform float _SpecularBleed;
+uniform float _ClampMin, _ClampMax;
+
 
 float _Noise;
 float _NoiseX;
