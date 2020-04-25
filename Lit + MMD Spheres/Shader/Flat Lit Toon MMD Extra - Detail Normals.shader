@@ -232,10 +232,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 
-				float3 finalColor = ((Matcap.Add.rgb + Matcap2.Add.rgb) + ((_ColorIntensity / 2) * (baseColor.rgb * (toonTexColor * toonTexColorDetail))) * (Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
+				float3 finalColor = ((Matcap.Add.rgb + Matcap2.Add.rgb) + ((_ColorIntensity / 2) * (baseColor.rgb * (toonTexColor))) * (Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
 				
 				if(light_Env != 1)
-					finalColor = ((Matcap.Add.rgb + Matcap2.Add.rgb) + ((_ColorIntensity / 2) * (baseColor.rgb * (toonTexColor * toonTexColorDetail))) * (Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+					finalColor = ((Matcap.Add.rgb + Matcap2.Add.rgb) + ((_ColorIntensity / 2) * (baseColor.rgb * (toonTexColor))) * (Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
