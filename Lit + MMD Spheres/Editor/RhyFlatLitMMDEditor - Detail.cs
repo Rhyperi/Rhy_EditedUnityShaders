@@ -201,7 +201,7 @@ public class RhyFlatLitMMDEditorDetail : ShaderGUI
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
                 GUILayout.Space(20);
-                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Detail");
+                GUILayout.Label("Version: " + shaderVariables.versionNumber + " - Detail Normals v2");
                 EditorGUI.BeginChangeCheck();
                 
                 
