@@ -59,7 +59,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Fader Shader"
 			ZTest LEqual
 			AlphaToMask On
 			ColorMask RGB
-			Cull Front
+			Cull Off
 			LOD 200
 			Blend One Zero
 
@@ -82,12 +82,16 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Fader Shader"
 				float finalAlpha = _MainTex_var.a;
 				float3 finalColor = _MainTex_var.rgb;
 				
-				if(_Mode == 1)
-					clip (finalAlpha - _Cutoff);
-				if(_Mode == 3)
-					finalAlpha -= _Opacity;
+				//if(_Mode == 1)
+				//	clip(finalAlpha - _Cutoff);
+				//if(_Mode == 3)
+				//	finalAlpha -= _Opacity;
 				
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);	
+				
+				if(finalAlpha < 0.8)
+					finalRGBA = fixed4(finalColor, 0);
+
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 				return finalRGBA;
 			}
@@ -156,7 +160,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Fader Shader"
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
-				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol) + shadowMask_var.rgb;
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
@@ -254,8 +258,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Fader Shader"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-
-				//float3 finalColor = baseColor.rgb;
 				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
 								
 				if(light_Env != 1)

@@ -26,7 +26,7 @@ struct VertexOutputShadowCaster
 {
     V2F_SHADOW_CASTER_NOPOS
     // Need to output UVs in shadow caster, since we need to sample texture and do clip/dithering based on it
-    float2 tex : TEXCOORD1;
+    float2 tex : TEXCOORD0;
 };
 
 // We have to do these dances of outputting SV_POSITION separately from the vertex shader,
@@ -52,7 +52,8 @@ half4 fragShadowCaster
 {
 	half alpha = tex2D(_MainTex, TRANSFORM_TEX(i.tex, _MainTex)).a;
 	if(_Mode == 1)
-		clip(alpha - _Cutoff);
+		if(alpha < 0.8)
+			clip(-1);
 	
     SHADOW_CASTER_FRAGMENT(i)
 }
