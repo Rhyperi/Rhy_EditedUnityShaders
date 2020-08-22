@@ -144,6 +144,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/2x Emissions"
 					finalAlpha -= _Opacity;
 				
 				float3 finalColor = (emissive + emissive2) + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+				float4 white = float4(1,1,1,1);
+
+				if(all(shadowMask_var == white))
+					finalColor = (emissive + emissive2) + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb) * Matcap.Mul)) * (lerp(float4(1,1,1,1), Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

@@ -108,6 +108,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
+				//toonTexColor *= shadowMask_var;
+				//shadowTexColor += shadowMask_var;
+
 				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
@@ -122,6 +125,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 					finalAlpha -= _Opacity;
 				
 				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+				float4 white = float4(1,1,1,1);
+
+				if(all(shadowMask_var == white))
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(float4(1,1,1,1), Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -185,8 +192,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
-				
-				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol) + shadowMask_var.rgb;
+
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
@@ -220,7 +227,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 			ZWrite On
 			ZTest LEqual
-			Cull Off
+			Cull [_Cull]
 
 			CGPROGRAM
 			#include "FlatLitToonShadows.cginc"

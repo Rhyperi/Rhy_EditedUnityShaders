@@ -16,6 +16,6 @@ namespace publicVariables
         }
 
         //Editor Variables
-        public static string versionNumber = "2.3";
+        public static string versionNumber = "2.4";
     }
 }

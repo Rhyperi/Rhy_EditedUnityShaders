@@ -44,7 +44,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 	{
 		Tags
 		{
-			"Queue" = "Transparent-3"
+			"Queue" = "Geometry+3"
 			"RenderType" = "Transparent"
 		}
 
@@ -123,6 +123,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit"
 				
 				
 				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+				float4 white = float4(1,1,1,1);
+
+				if(all(shadowMask_var == white))
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.lightCol, Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

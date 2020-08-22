@@ -192,6 +192,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
 					finalAlpha -= _Opacity;
 
 				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+				float4 white = float4(1,1,1,1);
+
+				if(all(shadowMask_var == white))
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.lightCol, Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(lerp(sceneColor.rgb, finalColor,(node_7877*saturate(((node_2121*1.0)+node_8264)))), finalAlpha);
 				return finalRGBA;
