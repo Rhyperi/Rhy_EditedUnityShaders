@@ -6,6 +6,29 @@ using publicVariables;
 
 public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
 {
+    public class MyToggleDrawer : MaterialPropertyDrawer
+    {
+        // Draw the property inside the given rect
+        public override void OnGUI(Rect position, MaterialProperty prop, String label, MaterialEditor editor)
+        {
+            // Setup
+            bool value = (prop.floatValue != 0.0f);
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+
+            // Show the toggle control
+            value = EditorGUILayout.Toggle(label, value);
+
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                // Set the new value if it has changed
+                prop.floatValue = value ? 1.0f : 0.0f;
+            }
+        }
+    }
+
     public enum CullMode
     {
         None,
@@ -39,12 +62,14 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     MaterialProperty defaultLightDir;
     MaterialProperty emissionMap;
     MaterialProperty emissionColor;
+    MaterialProperty emissionAltColor;
     MaterialProperty emissionMask;
     MaterialProperty emissionIntensity;
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty emissionMap2;
     MaterialProperty emissionColor2;
+    MaterialProperty emissionAltColor2;
     MaterialProperty emissionMask2;
     MaterialProperty emissionIntensity2;
     MaterialProperty speedX2;
@@ -54,7 +79,8 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
     MaterialProperty specularBleed;
     MaterialProperty clampMin;
     MaterialProperty clampMax;
-
+    MaterialProperty emissionToggle;
+    MaterialProperty emissionToggle2;
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
@@ -77,12 +103,14 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
             defaultLightDir = FindProperty("_DefaultLightDir", props);
             emissionMap = FindProperty("_EmissionMap", props);
             emissionColor = FindProperty("_EmissionColor", props);
+            emissionAltColor = FindProperty("_EmissionAltColor", props);
             emissionMask = FindProperty("_EmissionMask", props);
             emissionIntensity = FindProperty("_EmissionIntensity", props);
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             emissionMap2 = FindProperty("_EmissionMap2", props);
             emissionColor2 = FindProperty("_EmissionColor2", props);
+            emissionAltColor2 = FindProperty("_EmissionAltColor2", props);
             emissionMask2 = FindProperty("_EmissionMask2", props);
             emissionIntensity2 = FindProperty("_EmissionIntensity2", props);
             speedX2 = FindProperty("_SpeedX2", props);
@@ -94,15 +122,30 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
             clampMax = FindProperty("_ClampMax", props);
             clampMin = FindProperty("_ClampMin", props);
             clampMax = FindProperty("_ClampMax", props);
+            emissionToggle = FindProperty("_EmissionToggle", props);
+            emissionToggle2 = FindProperty("_EmissionToggle2", props);
         }
         
         Material material = materialEditor.target as Material;
+        bool ToggleEmission = false;
+        bool ToggleEmission2 = false;
 
         { //Shader Properties GUI
             EditorGUIUtility.labelWidth = 0f;
-            
+            MyToggleDrawer ToggleDraw = new MyToggleDrawer();
+
             EditorGUI.BeginChangeCheck();
             {
+                if (emissionToggle.floatValue != 1)
+                    ToggleEmission = true;
+                else
+                    ToggleEmission = false;
+
+                if (emissionToggle2.floatValue != 1)
+                    ToggleEmission2 = true;
+                else
+                    ToggleEmission2 = false;
+
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
                 EditorGUI.showMixedValue = cullMode.hasMixedValue;
 
@@ -170,7 +213,21 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                 materialEditor.TextureScaleOffsetProperty(normalMap);
                 GUILayout.Space(6);
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
-                materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission"), emissionMap, emissionColor);
+  
+                //Toggle For Alternate Emissions
+                materialEditor.TexturePropertySingleLine(new GUIContent("Emission Map", "Emission Map"), emissionMap);
+                GUILayout.Space(6);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), emissionToggle, "Set to Default Emission Variable?", materialEditor);
+
+                EditorGUI.BeginChangeCheck();
+                if (!ToggleEmission)
+                    materialEditor.ColorProperty(emissionColor, "Emission Color");
+                else
+                    materialEditor.ColorProperty(emissionAltColor, "Emission Alt Color");
+
+                if (EditorGUI.EndChangeCheck())
+                    materialEditor.Repaint();
+
                     materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                     materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);
@@ -178,7 +235,20 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
                     materialEditor.ShaderProperty(speedX, new GUIContent("Mask X Scroll Speed"), 0);
                     materialEditor.ShaderProperty(speedY, new GUIContent("Mask Y Scroll Speed"), 0);
                 EditorGUI.indentLevel -= 2;
-                materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission", "2nd Emission Mask"), emissionMap2, emissionColor2);
+
+                materialEditor.TexturePropertySingleLine(new GUIContent("Emission Map 2", "Emission Map 2"), emissionMap2);
+                GUILayout.Space(6);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), emissionToggle2, "Set to Default Emission Variable?", materialEditor);
+
+                EditorGUI.BeginChangeCheck();
+                if (!ToggleEmission2)
+                    materialEditor.ColorProperty(emissionColor2, "Emission 2 Color");
+                else
+                    materialEditor.ColorProperty(emissionAltColor2, "Emission 2 Alt Color");
+
+                if (EditorGUI.EndChangeCheck())
+                    materialEditor.Repaint();
+
                 materialEditor.ShaderProperty(emissionIntensity2, "2nd Intensity", 2);
                 EditorGUI.indentLevel += 2;
                 materialEditor.TexturePropertySingleLine(new GUIContent("2nd Emission Mask"), emissionMask2);

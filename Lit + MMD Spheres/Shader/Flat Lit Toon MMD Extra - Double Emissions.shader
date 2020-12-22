@@ -29,13 +29,17 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/2x Emissions"
 		_SpeedY2("2nd Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
+		[HDR]_EmissionAltColor("Emission Alt Color", Color) = (0,0,0,1)
 		[HDR]_EmissionColor2("Emission Color", Color) = (0,0,0,1)
+		[HDR]_EmissionAltColor2("Emission Alt Color", Color) = (0,0,0,1)
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		_Opacity("Opacity", Range(1,0)) = 0
 		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
 		_ClampMin("Minimum Light Intensity", Range(0,3)) = 0
 		_ClampMax("Maximum Light Intensity", Range(1,5)) = 5
+		_EmissionToggle("Emission Toggle", Float) = 0
+		_EmissionToggle2("Emission Toggle", Float) = 0
 
 		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
@@ -110,13 +114,25 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/2x Emissions"
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
-				float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
+				float3 emissive = _EmissionMap_var.rgb;
+
+				if(_EmissionToggle == 1)
+					emissive.rgb *= _EmissionColor;
+				else
+					emissive.rgb *= _EmissionAltColor;
+
 				emissive.rgb *= emissionMask_var.rgb;
 				emissive.rgb *= _EmissionIntensity;
 				
 				float4 _EmissionMap_var2 = tex2D(_EmissionMap2,TRANSFORM_TEX(i.uv0, _EmissionMap2));
 				float4 emissionMask_var2 = tex2D(_EmissionMask2,TRANSFORM_TEX(emissionUV2, _EmissionMask2));
-				float3 emissive2 = (_EmissionMap_var2.rgb*_EmissionColor2.rgb);
+				float3 emissive2 = _EmissionMap_var2.rgb;
+
+				if(_EmissionToggle2 == 1)
+					emissive2.rgb *= _EmissionColor2;
+				else
+					emissive2.rgb *= _EmissionAltColor2;
+
 				emissive2.rgb *= emissionMask_var2.rgb;
 				emissive2.rgb *= _EmissionIntensity2;
 				

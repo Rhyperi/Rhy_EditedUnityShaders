@@ -71,10 +71,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 			#pragma geometry geom
 			#pragma fragment frag
 
-			#pragma multi_compile_fog
-			#pragma multi_compile_fwdbase
-			#pragma target 4.0
 			#pragma only_renderers d3d11 glcore gles
+			#pragma target 4.0
+			#pragma multi_compile_fwdadd_fullshadows
+			#pragma multi_compile_fog
 			
 			float2 emissionUV;
 			float2 emissionMovement;
@@ -139,11 +139,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
 				Matcap.Mul.rgb *= _SphereMulIntensity;
-				Matcap2.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
+				Matcap2.Add.rgb *= (Matcap2.Mask * _SphereAddIntensity) * Matcap2.Shadow;
 				Matcap2.Mul.rgb *= _SphereMulIntensity;
 
-				Matcap.Add = lerp(Matcap.Add, Matcap2.Add, 0.5);
-				Matcap.Mul = lerp(Matcap.Add, Matcap2.Mul, 0.5);
+				Matcap.Add = lerp(Matcap.Add, Matcap2.Add, attenuation);
+				Matcap.Mul = lerp(Matcap.Mul, Matcap2.Mul, attenuation);
 
 				float finalAlpha = baseColor.a;
 
@@ -156,7 +156,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float4 white = float4(1,1,1,1);
 
 				if(all(shadowMask_var == white))
-					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor)) * Matcap.Mul) * lerp(float4(1,1,1,1), lerp(Lighting.directLit, Lighting2.directLit, 0.5), attenuation);
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor)) * Matcap.Mul) * lerp(_LightColor0, lerp(Lighting.directLit, Lighting2.directLit, 0.5), attenuation);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -237,12 +237,20 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
+				toonTexColor += toonTexColorDetail;
+
 				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol) + shadowMask_var.rgb;
 				Lighting2.indirectLit += (shadowTexColor * Lighting2.lightCol) + shadowMask_var.rgb;
-				Matcap = CalculateSphere(normalDirection + maskedNormalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
+				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
+				Matcap2 = CalculateSphere(maskedNormalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
 				Matcap.Mul.rgb *= _SphereMulIntensity;
+				Matcap2.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
+				Matcap2.Mul.rgb *= _SphereMulIntensity;
+
+				Matcap.Add = lerp(Matcap.Add, Matcap2.Add, 0.5);
+				Matcap.Mul = lerp(Matcap.Mul, Matcap2.Mul, 0.5);
 
 				float finalAlpha = baseColor.a;
 
@@ -251,10 +259,10 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Detail Normals"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 
-				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * ((toonTexColor + toonTexColorDetail) / 2))) * Matcap.Mul) * lerp(0, ((Lighting.directLit + Lighting2.directLit) / 2), attenuation);
-				
+				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor)) * Matcap.Mul) * lerp(0, lerp(Lighting.directLit, Lighting2.directLit, 0.5), attenuation);
+
 				if(light_Env != 1)
-					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * ((toonTexColor + toonTexColorDetail) / 2))) * Matcap.Mul) * lerp(((Lighting.lightCol + Lighting2.lightCol) / 2), ((Lighting.directLit + Lighting2.directLit) / 2), attenuation);
+					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor)) * Matcap.Mul) * lerp(lerp(Lighting.lightCol,  Lighting2.lightCol, 0.5), lerp(Lighting.directLit, Lighting2.directLit, 0.5), attenuation);
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

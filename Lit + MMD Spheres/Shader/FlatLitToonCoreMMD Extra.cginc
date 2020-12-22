@@ -46,6 +46,8 @@ uniform float4 _EmissionColor;
 uniform float _EmissionIntensity;
 uniform float4 _EmissionColor2;
 uniform float _EmissionIntensity2;
+uniform float4 _EmissionAltColor;
+uniform float4 _EmissionAltColor2;
 uniform float _outline_width;
 uniform float4 _outline_color;
 uniform float4 _DefaultLightDir;
@@ -55,6 +57,7 @@ uniform float _Opacity;
 uniform float _SpecularBleed;
 uniform float _Fader;
 uniform float _ClampMin, _ClampMax;
+uniform float _EmissionToggle, _EmissionToggle2;
 
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);

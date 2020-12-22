@@ -1,3 +1,7 @@
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
 #ifndef FLAT_LIT_TOON_CORE_INCLUDED
 
 #include "UnityStandardBRDF.cginc"
@@ -74,6 +78,16 @@ half3 GetSHLength()
 float3 ShadeSH9Normal(float3 normalDirection)
 {
     return ShadeSH9(half4(normalDirection, 1.0));
+}
+
+float4 positionFind (float4 position)
+{
+	return mul(unity_WorldToObject, position);
+}
+
+float3 normalFind (float3 normal)
+{
+	return mul(unity_WorldToObject, normal);
 }
 
 float grayscaleSH9(float3 normalDirection)

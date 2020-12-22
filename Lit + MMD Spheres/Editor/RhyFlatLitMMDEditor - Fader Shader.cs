@@ -6,6 +6,29 @@ using publicVariables;
 
 public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 {
+    public class MyToggleDrawer : MaterialPropertyDrawer
+    {
+        // Draw the property inside the given rect
+        public override void OnGUI(Rect position, MaterialProperty prop, String label, MaterialEditor editor)
+        {
+            // Setup
+            bool value = (prop.floatValue != 0.0f);
+
+            EditorGUI.BeginChangeCheck();
+            EditorGUI.showMixedValue = prop.hasMixedValue;
+
+            // Show the toggle control
+            value = EditorGUILayout.Toggle(label, value);
+
+            EditorGUI.showMixedValue = false;
+            if (EditorGUI.EndChangeCheck())
+            {
+                // Set the new value if it has changed
+                prop.floatValue = value ? 1.0f : 0.0f;
+            }
+        }
+    }
+
 
     public enum OutlineMode
     {
@@ -53,6 +76,8 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 	MaterialProperty fader;
     MaterialProperty clampMin;
     MaterialProperty clampMax;
+    MaterialProperty emissionToggle;
+    MaterialProperty emissionAltColor;
 
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
@@ -88,15 +113,24 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 			fader = FindProperty("_Fader", props);
             clampMin = FindProperty("_ClampMin", props);
             clampMax = FindProperty("_ClampMax", props);
+            emissionToggle = FindProperty("_EmissionToggle", props);
+            emissionAltColor = FindProperty("_EmissionAltColor", props);
         }
 
         Material material = materialEditor.target as Material;
+        bool ToggleEmission = false;
 
         { //Shader Properties GUI
             EditorGUIUtility.labelWidth = 0f;
+            MyToggleDrawer ToggleDraw = new MyToggleDrawer();
 
             EditorGUI.BeginChangeCheck();
             {
+                if (emissionToggle.floatValue != 1)
+                    ToggleEmission = true;
+                else
+                    ToggleEmission = false;
+
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
                 var bMode = (BlendMode)blendMode.floatValue;
 				var cMode = (CullMode)cullMode.floatValue;
@@ -169,7 +203,21 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
                 materialEditor.TextureScaleOffsetProperty(normalMap);
                 GUILayout.Space(6);
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
-                materialEditor.TexturePropertySingleLine(new GUIContent("Emission", "Emission"), emissionMap, emissionColor);
+
+                //Toggle For Alternate Emissions
+                materialEditor.TexturePropertySingleLine(new GUIContent("Emission Map", "Emission Map"), emissionMap);
+                GUILayout.Space(6);
+                ToggleDraw.OnGUI(new Rect(0, 0, 100, 20), emissionToggle, "Set to Default Emission Variable?", materialEditor);
+
+                EditorGUI.BeginChangeCheck();
+                if (!ToggleEmission)
+                    materialEditor.ColorProperty(emissionColor, "Emission Color");
+                else
+                    materialEditor.ColorProperty(emissionAltColor, "Emission Alt Color");
+
+                if (EditorGUI.EndChangeCheck())
+                    materialEditor.Repaint();
+
                 materialEditor.ShaderProperty(emissionIntensity, "Intensity", 2);
                 EditorGUI.indentLevel += 2;
                 materialEditor.TexturePropertySingleLine(new GUIContent("Emission Mask"), emissionMask);

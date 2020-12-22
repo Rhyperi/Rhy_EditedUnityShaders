@@ -1,4 +1,4 @@
-Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
+Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Transparent Lit Fader"
 {
 	Properties
 	{
@@ -8,13 +8,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
 		_SphereAddTex("Sphere Add Texture", 2D) = "black" {}
 		_SphereAddIntensity("Add Sphere Texture Intensity", Range(0, 500)) = 1.0
+		_SphereAddSubTex("Sphere Add Sub Texture", 2D) = "black" {}
+		_SphereAddSubIntensity("Add Sphere Sub Texture Intensity", Range(0, 500)) = 1.0
 		_SphereMulTex("Sphere Multiply Texture", 2D) = "white" {}
 		_SphereMulIntensity("Multiply Sphere Texture Intensity", Range(0, 500)) = 1.0
 		_DefaultLightDir("Default Light Direction", Vector) = (1,1,1,0)
 		_ToonTex("Toon Texture", 2D) = "white" {}
 		_ShadowTex("Shadow Texture", 2D) = "white" {}
 		_ShadowMask("Shadow Mask", 2D) = "black" {}
-		_HighlightTex("Hightlight Texture", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
@@ -24,12 +25,14 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		_SpeedX("Emission X speed", Float) = 1.0
 		_SpeedY("Emission Y speed", Float) = 1.0
 		_SphereMap("Sphere Mask", 2D) = "white" {}
+		_SphereSubMap("Sphere Sub Mask", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		[HDR]_EmissionAltColor("Emission Alt Color", Color) = (0,0,0,1)
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		_Opacity("Opacity", Range(1,0)) = 0
 		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
+		_Fader("Matcap Fader", Range(0, 100)) = 50
 		_ClampMin("Minimum Light Intensity", Range(0,3)) = 0
 		_ClampMax("Maximum Light Intensity", Range(1,5)) = 5
 		_EmissionToggle("Emission Toggle", Float) = 0
@@ -47,8 +50,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 	{
 		Tags
 		{
-			"Queue"="Geometry"
-			"RenderType" = "Opaque"
+			"Queue" = "Geometry+3"
+			"RenderType" = "Transparent"
 		}
 
 		Pass
@@ -69,18 +72,19 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			#pragma geometry geom
 			#pragma fragment frag
 
-			#pragma multi_compile_fog
-			#pragma multi_compile_fwdbase
-			#pragma target 4.0
 			#pragma only_renderers d3d11 glcore gles
+			#pragma target 4.0
+			#pragma multi_compile_fwdadd_fullshadows
+			#pragma multi_compile_fog
 
 			float2 emissionUV;
 			float2 emissionMovement;
 			LightContainer Lighting;
 			MatcapContainer Matcap;
-
+			MatcapContainer Matcap2;
+			
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
-			{
+			{			
 				float faceSign = ( facing >= 0 ? 1 : -1 );
 			
 				emissionUV = i.uv0;
@@ -90,6 +94,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
+
 				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform);
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);			
 				
@@ -116,37 +121,36 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
-				//toonTexColor *= shadowMask_var;
-				//shadowTexColor += shadowMask_var;
-
-				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol) + shadowMask_var.rgb;
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
 				Matcap.Mul.rgb *= _SphereMulIntensity;
 
+				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
+				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
+				sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
+
 				float finalAlpha = baseColor.a;
-				
+
 				if(_Mode == 1)
 					clip (finalAlpha - _Cutoff);
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+				
+				float3 finalColor = emissive + ((Matcap.Add + sphereSubAdd) + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 				float4 white = float4(1,1,1,1);
 
 				if(all(shadowMask_var == white))
-					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(_LightColor0, Lighting.directLit, attenuation));
+					finalColor = emissive + ((Matcap.Add + sphereSubAdd) + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.lightCol, Lighting.directLit, attenuation));
 
-				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);					
+				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
-
-				
-
 				return finalRGBA;
 			}
 			ENDCG
-		}			
+		}		
 		
 		Pass
 		{
@@ -155,13 +159,13 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			{ 
 				"LightMode" = "ForwardAdd"
 			}
+
 			Blend [_SrcBlend] One
-			ZWrite On
-			ZTest LEqual
+			ZWrite Off
+			ZTest LEqual 
 			LOD 200
 			Cull [_Cull]
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
-			
 
 			CGPROGRAM
 			#include "FlatLitToonCoreMMD Extra.cginc"
@@ -177,7 +181,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 			LightContainer Lighting;
 			MatcapContainer Matcap;
-			
+			MatcapContainer Matcap2;
+
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
 			{
 				float faceSign = ( facing >= 0 ? 1 : -1 );
@@ -200,12 +205,16 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
-
-				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol);
+				
+				Lighting.indirectLit += (shadowTexColor * Lighting.lightCol) + shadowMask_var.rgb;
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
 				Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
 				Matcap.Mul.rgb *= _SphereMulIntensity;
+
+				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
+				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
+				sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
 
 				float finalAlpha = baseColor.a;
 
@@ -214,14 +223,13 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				if(_Mode == 3)
 					finalAlpha -= _Opacity;
 				
-				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
-
+				float3 finalColor = ((Matcap.Add + sphereSubAdd) + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
+								
 				if(light_Env != 1)
-					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(_LightColor0, Lighting.directLit, attenuation));
+					finalColor = ((Matcap.Add + sphereSubAdd) + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
-
 				return finalRGBA;
 			}
 			ENDCG
@@ -235,7 +243,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 
 			ZWrite On
 			ZTest LEqual
-			Cull [_Cull]
+			Cull Off
 
 			CGPROGRAM
 			#include "FlatLitToonShadows.cginc"
@@ -251,6 +259,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			ENDCG
 		}
 	}
-	Fallback "Unlit/Texture"
-	CustomEditor "RhyFlatLitMMDEditor"
+	Fallback "Transparent/VertexLit"
+	CustomEditor "RhyFlatLitMMDEditorFaderShader"
 }
