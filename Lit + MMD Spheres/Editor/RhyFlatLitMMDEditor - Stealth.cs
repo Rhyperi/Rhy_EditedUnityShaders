@@ -30,13 +30,6 @@ public class RhyFlatLitMMDEditorStealth : ShaderGUI
         }
     }
 
-    public enum CullMode
-    {
-        None,
-        Front,
-        Back
-    }
-
     public enum BlendMode
     {
         Opaque,

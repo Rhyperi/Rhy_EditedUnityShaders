@@ -29,13 +29,6 @@ public class RhyFlatLitMMDEditor2xEmission : ShaderGUI
         }
     }
 
-    public enum CullMode
-    {
-        None,
-        Front,
-        Back
-    }
-
     public enum BlendMode
     {
         Opaque,

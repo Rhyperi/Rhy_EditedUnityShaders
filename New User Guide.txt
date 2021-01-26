@@ -26,6 +26,8 @@ Rendering Mode:
 	Fade - Semi transparency support and no self-shadowing
 	Transparent - Blanket transparency + opacity slider (note: still being worked on) and no self-shadowing
 
+	Big Note: Unless you're 100% sure about the queues make sure to only use the transparent modes on the shaders marked Transparency.
+
 -General Texture Section-	
 	Main Texture:
 		The main texture to be displayed, often called albedo.
@@ -96,34 +98,3 @@ Rendering Mode:
 		
 	Mask X/Y Scroll Speed:
 		Input the speed of how fast the mask above should scroll, creating animated emissions.
-		
-
-=Detail Noramls=
-Similar to the basic shader, but has both support for normal maps and detail normal maps.
-	
-=Transparent Lit=
-Render Queue: Geometry+1
-Mainly to be used in cases where you have a semi-transparent object that still needs self-shadowing such as clothing.  *Make sure to use it in Cutout Render Mode!*
-
-=Transparent Unlit=
-Render Queue: Transparent-1
-Mainly to be used in cases like blushes or other effects that don't need to be affected by self-shadowing.
-
-=2x Emissions=
-Similar to basic shader, just has support for 2 scrolling emissions on one material
-
-=Wiggle=
-Similar to basic shader, but can be given a mask and settings to wobble verts around for dumb fun.
-wiggle wiggle.
-
-=Color Masking=
-Similar to basic shader.  Use a mask to apply a decal-like effect to the material, can also control the RGB effects as well.
-
-=Stealth=
-An older shader, no self-shadowing as of yet.
-Has a stealth effect, think predator cloak, that can be set with effect of the cloak, the strength, color, and other things.
-Is on the docket to recieve the lighting upgrade .
-
-=Other shaders=
-These are old and side projects that I've done for myself or others, they may, and probably will, cause issues when you plop them into your project, so please be careful.
-I don't plan on revisiting these at the moment, but if people are curious for updated ones I can look into it.

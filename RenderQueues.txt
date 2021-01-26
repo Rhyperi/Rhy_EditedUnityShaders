@@ -1,0 +1,18 @@
+Render Queues
+-------------
+Basic - Geometry
+Fader Shader - Geometry+1
+Fader Shader Double Normal - Geometry+2
+Transparent Lit Fader - Geometry+5
+Transparent Lit Special - Geometry+6
+Transparent Lit - Geometry+7
+
+<Gap>
+
+
+
+Transparent Unlit - Transparent-2
+
+-------------
+
+All unlisted ones are Geometry

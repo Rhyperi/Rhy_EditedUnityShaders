@@ -29,14 +29,6 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
         }
     }
 
-
-    public enum OutlineMode
-    {
-        None,
-        Tinted,
-        Colored
-    }
-
     public enum BlendMode
     {
         Opaque,
