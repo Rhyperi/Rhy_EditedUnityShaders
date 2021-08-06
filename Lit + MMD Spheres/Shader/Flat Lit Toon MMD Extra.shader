@@ -40,6 +40,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		[HideInInspector] _SrcBlend ("__src", Float) = 1.0
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
 		[HideInInspector] _ZWrite ("__zw", Float) = 1.0
+		[HideInInspector] _StencilRef("Stencil Reference Value", Range(0, 255)) = 2
 	}
 
 	SubShader
@@ -54,17 +55,23 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 		Pass
 		{
 			Name "FORWARD"
-			Tags { "LightMode" = "ForwardBase"}
+			Tags { 
+				"LightMode" = "ForwardBase"
+			}
 
 			Blend [_SrcBlend] [_DstBlend]
+			BlendOp Add
 			ZWrite On
 			ZTest LEqual
 			LOD 200
 			Cull [_Cull]
+			//ColorMask RGB
 						
 			CGPROGRAM
+			#include "UnityCG.cginc"
 			#include "FlatLitToonCoreMMD Extra.cginc"
 			#include "RhyShaderHelperFunction.cginc"
+			#pragma target 5.0
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -72,34 +79,55 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			#pragma multi_compile_fog
 			#pragma multi_compile_fwdbase
 			#pragma only_renderers d3d11 glcore gles
+			//#pragma multi_compile_instancing
+			//#pragma fragmentoption ARB_precision_hint_fastest
 
 			float2 emissionUV;
 			float2 emissionMovement;
+			float emissionMin;
+			float emissionMax;
+
 			LightContainer Lighting;
 			MatcapContainer Matcap;
 
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
 			{
 				float faceSign = ( facing >= 0 ? 1 : -1 );
-			
+
 				float4 white = float4(1,1,1,1);
+				float4 black = float4(0,0,0,0);
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				float4 lightColor = (_LightColor0.rgb, 1);
+				float4 lightColor = float4(_LightColor0.rgb, _LightColor0.w);
+				//float4 lightColor = unity_LightColor[0] + unity_LightColor[1] + unity_LightColor[2] + unity_LightColor[3];
+				float AvgIntensity = (_LightColor0.r + _LightColor0.g + _LightColor0.b)/3;
+
+				emissionMin = 0;
+				emissionMax = 2;
 
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
 				emissionUV.y += _Time.x * _SpeedY;
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
-				
+
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform);
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);			
 
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				//attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				//if(attenuation == 0)
+				//	attenuation = .5;
 
-				Lighting = CalculateLight(_DefaultLightDir, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
+				Lighting = CalculateLight(_WorldSpaceLightPos0, (_LightColor0 * .75), normalDirection, attenuation, _ClampMin, _ClampMax);
+
+				/*
+				if(AvgIntensity >= emissionMin)
+					if(AvgIntensity <= emissionMax)
+						_EmissionIntensity = _EmissionIntensity * clamp((1 - (AvgIntensity/emissionMax)),0,1);
+					else
+						_EmissionIntensity = 0;
+				*/
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
@@ -143,11 +171,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 					finalAlpha = _Opacity;
 				
 				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
-				if(all(shadowMask_var == white))
-					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
 
 				if(light_Env != 1)
-					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.directLit;
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
+					
+				
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -191,8 +219,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				
 				float4 white = float4(1,1,1,1);
+				float4 black = float4(0,0,0,0);
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-				float4 lightColor = (_LightColor0.rgb, 1);
+				//float4 lightColor = _LightColor0.rgb;
 
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
@@ -201,9 +230,11 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);			
 
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				//attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				//if(attenuation == 0)
+				//	attenuation = .5;
 
-				Lighting = CalculateLight(_DefaultLightDir, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
+				Lighting = CalculateLight(_DefaultLightDir, (_LightColor0 * .75), normalDirection, attenuation, _ClampMin, _ClampMax);
 				
 				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
 				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.5);
@@ -237,11 +268,9 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 					finalAlpha = _Opacity;
 				
 				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
-				if(all(shadowMask_var == white))
-					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb) * Matcap.Mul)) * (lerp(0, 1, attenuation) * Lighting.directLit);
 
 				if(light_Env != 1)
-					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.directLit;
+					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);					
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -250,7 +279,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Basic"
 			}
 			ENDCG
 		}
-		
 		Pass
 		{
 			Name "SHADOW_CASTER"

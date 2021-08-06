@@ -86,6 +86,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
 			{
 				float faceSign = ( facing >= 0 ? 1 : -1 );
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
 			
 				emissionUV = i.uv0;
 				emissionUV.x += _Time.x * _SpeedX;
@@ -130,8 +131,8 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				float3 finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 				float4 white = float4(1,1,1,1);
 
-				if(all(shadowMask_var == white))
-					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.lightCol, Lighting.directLit, attenuation));
+				if(light_Env != 1)
+					finalColor = emissive + (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
@@ -174,6 +175,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 			{
 				float faceSign = ( facing >= 0 ? 1 : -1 );
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
 				
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
@@ -183,7 +185,6 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
 
 				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
 				
@@ -209,7 +210,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Wiggle"
 				float3 finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
 								
 				if(light_Env != 1)
-					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+					finalColor = (Matcap.Add + ((_ColorIntensity / 2) * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
 
 				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

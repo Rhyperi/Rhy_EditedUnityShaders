@@ -22,6 +22,7 @@ struct LightContainer
 	float3 directLit;
 	float3 indirectLit;
 	float bw_lightDif;
+	float3 normalizedLight;
 };
 
 struct MatcapContainer
@@ -107,29 +108,29 @@ float4 calculateColor(float4 inLight)
 LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, float inAttenuation, float inMin, float inMax)
 {
 	LightContainer returnLight;
-	float3 lightDirection = normalize(inLight.xyz);	
+	float3 lightDirection = Unity_SafeNormalize(inLight.xyz); 	
 	float light_Env = float(any(inLight.xyz));
 	float4 lightColor = inColor;
 	float3 indirectDiffuse = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-	
+
 	if(light_Env != 1)
 	{
 			lightDirection = normalize(_DefaultLightDir);
 			lightColor.rgb = indirectDiffuse;
 	}
+
+	lightColor = clamp(lightColor, inMin, inMax);
 				
 	float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
 	float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
 	float colorIndirectLighting = dot(lightDirection, inNormal) * lightColor * inAttenuation + grayscaleSH9(inNormal);
 	float3 ShadeSH9Plus = GetSHLength();
 	float3 ShadeSH9Minus = ShadeSH9(float4(0, 0, 0, 1));
-				
+
 	float bw_lightColor = dot(lightColor, grayscale_vector);
 	float bw_bottomIndirectLighting = dot(ShadeSH9Minus, grayscale_vector);
 	float bw_topIndirectLighting = dot(ShadeSH9Plus, grayscale_vector);
 	float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
-
-	lightColor = clamp(lightColor, inMin, inMax);
 
 	float3 indirectLighting = ShadeSH9Minus;
 	float3 directLighting = ShadeSH9Plus + lightColor;
@@ -139,6 +140,7 @@ LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, f
 	returnLight.directLit = directLighting;
 	returnLight.indirectLit = indirectLighting;
 	returnLight.bw_lightDif = bw_lightDifference;
+	returnLight.normalizedLight = bw_lightDifference;
 
 	return returnLight;
 }

@@ -65,7 +65,7 @@ Shader "Rhy Custom Shaders/Flat Lit Toon + MMD/Stealth"
             "RenderType" = "Transparent"
 		}
 
-		GrabPass{ "Refraction" }
+		GrabPass{"Refraction"}
 		Pass
 		{
 
