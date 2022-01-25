@@ -31,6 +31,7 @@ uniform sampler2D _EmissionMask2; uniform float4 _EmissionMask2_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 uniform sampler2D _DetailMap; uniform float4 _DetailMap_ST;
 uniform sampler2D _NormalMask; uniform float4 _NormalMask_ST;
+uniform sampler2D _DetailMask; uniform float4 _DetailMask_ST;
 uniform sampler2D inTexture; uniform float4 inTexture_ST;
 uniform sampler2D inNormal; uniform float4 inNormal_ST;
 
@@ -53,11 +54,16 @@ uniform float4 _outline_color;
 uniform float4 _DefaultLightDir;
 uniform float _SpecularToggle;
 uniform float _Mode;
+uniform float _Queue;
 uniform float _Opacity;
 uniform float _SpecularBleed;
 uniform float _Fader;
 uniform float _ClampMin, _ClampMax;
 uniform float _EmissionToggle, _EmissionToggle2;
+uniform float _NormalIntensity;
+uniform float _DetailIntensity;
+
+uniform int _Select;
 
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
@@ -81,7 +87,7 @@ struct v2g
 v2g vert(appdata_full v) {
 	v2g o;
 	o.uv0 = v.texcoord;
-	o.uv1 = v.texcoord1;
+	o.uv1 = o.uv0;
 	o.normal = v.normal;
 	o.tangent = v.tangent;
 	o.normalDir = normalize(UnityObjectToWorldNormal(v.normal));
@@ -124,7 +130,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.normalDir = UnityObjectToWorldNormal(IN[ii].normal);
 		o.tangentDir = IN[ii].tangentDir;
 		o.bitangentDir = IN[ii].bitangentDir;
-		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)

@@ -22,7 +22,6 @@ struct LightContainer
 	float3 directLit;
 	float3 indirectLit;
 	float bw_lightDif;
-	float3 normalizedLight;
 };
 
 struct MatcapContainer
@@ -39,54 +38,54 @@ float2 matcapSample(float3 worldUp, float3 viewDirection, float3 normalDirection
 	half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
 	half3 worldViewRight = normalize(cross(viewDirection, worldViewUp));
 	half2 matcapUV = half2(dot(worldViewRight, normalDirection), dot(worldViewUp, normalDirection)) * 0.5 + 0.5;
-	return matcapUV;				
+	return matcapUV;
 }
 
 float3 VRViewPosition()
 {
-	#if defined(USING_STEREO_MATRICES)
-		float3 leftEye = unity_StereoWorldSpaceCameraPos[0];
-		float3 rightEye = unity_StereoWorldSpaceCameraPos[1];
-            
-		float3 centerEye = lerp(leftEye, rightEye, 0.5);
-    #else
-		float3 centerEye = _WorldSpaceCameraPos;
-    #endif
-    return centerEye;
+#if defined(USING_STEREO_MATRICES)
+	float3 leftEye = unity_StereoWorldSpaceCameraPos[0];
+	float3 rightEye = unity_StereoWorldSpaceCameraPos[1];
+
+	float3 centerEye = lerp(leftEye, rightEye, 0.5);
+#else
+	float3 centerEye = _WorldSpaceCameraPos;
+#endif
+	return centerEye;
 }
 
 float FadeShadows(float attenuation, float3 worldPosition)
 {
-    float viewZ = dot(_WorldSpaceCameraPos - worldPosition, UNITY_MATRIX_V[2].xyz);
-    float shadowFadeDistance = UnityComputeShadowFadeDistance(worldPosition, viewZ);
-    float shadowFade = UnityComputeShadowFade(shadowFadeDistance);
-    attenuation = saturate(attenuation + shadowFade);
-    return attenuation;
+	float viewZ = dot(_WorldSpaceCameraPos - worldPosition, UNITY_MATRIX_V[2].xyz);
+	float shadowFadeDistance = UnityComputeShadowFadeDistance(worldPosition, viewZ);
+	float shadowFade = UnityComputeShadowFade(shadowFadeDistance);
+	attenuation = saturate(attenuation + shadowFade);
+	return attenuation;
 }
 
 half3 GetSHLength()
 {
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
+	half3 x, x1;
+	x.r = length(unity_SHAr);
+	x.g = length(unity_SHAg);
+	x.b = length(unity_SHAb);
+	x1.r = length(unity_SHBr);
+	x1.g = length(unity_SHBg);
+	x1.b = length(unity_SHBb);
+	return x + x1;
 }
 
 float3 ShadeSH9Normal(float3 normalDirection)
 {
-    return ShadeSH9(half4(normalDirection, 1.0));
+	return ShadeSH9(half4(normalDirection, 1.0));
 }
 
-float4 positionFind (float4 position)
+float4 positionFind(float4 position)
 {
 	return mul(unity_WorldToObject, position);
 }
 
-float3 normalFind (float3 normal)
+float3 normalFind(float3 normal)
 {
 	return mul(unity_WorldToObject, normal);
 }
@@ -99,7 +98,7 @@ float grayscaleSH9(float3 normalDirection)
 float4 calculateColor(float4 inLight)
 {
 	float4 color;
-	float3 colorCalculatedForThisFragment = float3(1,1,1);
+	float3 colorCalculatedForThisFragment = float3(1, 1, 1);
 	color.rgb = colorCalculatedForThisFragment * inLight;
 	color.a = 1;
 	return color;
@@ -108,20 +107,23 @@ float4 calculateColor(float4 inLight)
 LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, float inAttenuation, float inMin, float inMax)
 {
 	LightContainer returnLight;
-	float3 lightDirection = Unity_SafeNormalize(inLight.xyz); 	
+	float3 lightDirection = normalize(inLight.xyz);
 	float light_Env = float(any(inLight.xyz));
 	float4 lightColor = inColor;
 	float3 indirectDiffuse = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
 
-	if(light_Env != 1)
+	if (light_Env != 1)
 	{
-			lightDirection = normalize(_DefaultLightDir);
-			lightColor.rgb = indirectDiffuse;
+		lightDirection = normalize(_DefaultLightDir);
+		lightColor.rgb = indirectDiffuse;
 	}
 
-	lightColor = clamp(lightColor, inMin, inMax);
-				
-	float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
+	lightColor = clamp(lightColor, inMin * .6, inMax *.6);
+
+	//lightColor.r = clamp(lightColor.r, inMin, inMax);
+	//lightColor.g = clamp(lightColor.g, inMin, inMax);
+	//lightColor.b = clamp(lightColor.b, inMin, inMax);
+
 	float topIndirectLighting = grayscaleSH9(float3(0.0, 1.0, 0.0));
 	float colorIndirectLighting = dot(lightDirection, inNormal) * lightColor * inAttenuation + grayscaleSH9(inNormal);
 	float3 ShadeSH9Plus = GetSHLength();
@@ -130,17 +132,16 @@ LightContainer CalculateLight(float4 inLight, fixed4 inColor, float3 inNormal, f
 	float bw_lightColor = dot(lightColor, grayscale_vector);
 	float bw_bottomIndirectLighting = dot(ShadeSH9Minus, grayscale_vector);
 	float bw_topIndirectLighting = dot(ShadeSH9Plus, grayscale_vector);
-	float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;
+	float bw_lightDifference = (bw_topIndirectLighting + bw_lightColor) - bw_bottomIndirectLighting;	
 
-	float3 indirectLighting = ShadeSH9Minus;
+	float3 indirectLighting = topIndirectLighting;
 	float3 directLighting = ShadeSH9Plus + lightColor;
 
 	returnLight.lightDir = lightDirection;
-	returnLight.lightCol = lightColor;
-	returnLight.directLit = directLighting;
+	returnLight.lightCol = lightColor * .75;
+	returnLight.directLit = directLighting * .75;
 	returnLight.indirectLit = indirectLighting;
 	returnLight.bw_lightDif = bw_lightDifference;
-	returnLight.normalizedLight = bw_lightDifference;
 
 	return returnLight;
 }
@@ -149,20 +150,20 @@ MatcapContainer CalculateSphere(float3 inNormal, VertexOutput inI, sampler2D inA
 {
 	MatcapContainer Matcap;
 	float3 viewNormal = normalize(mul((float3x3)UNITY_MATRIX_V, inNormal));
-    float3 viewDir = normalize(UnityWorldToViewPos(inI.posWorld));
-    float3 viewCross = cross(viewDir, viewNormal);
-    viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
-				
+	float3 viewDir = normalize(UnityWorldToViewPos(inI.posWorld));
+	float3 viewCross = cross(viewDir, viewNormal);
+	viewNormal = float3(-viewCross.y, viewCross.x, 0.0);
+
 	float cameraRoll = -atan2(UNITY_MATRIX_I_V[1].x, UNITY_MATRIX_I_V[1].y);
 	float sinX = sin(cameraRoll);
 	float cosX = cos(cameraRoll);
 	float2x2 rotationMatrix = float2x2(cosX, -sinX, sinX, cosX);
-	viewNormal.xy = mul(viewNormal, rotationMatrix*inSign);
-				
+	viewNormal.xy = mul(viewNormal, rotationMatrix * inSign);
+
 	float specularShadows = ((inAttenuation * .9) + inBleed);
-	if(specularShadows > 1)
+	if (specularShadows > 1)
 		specularShadows = 1;
-				
+
 	float2 sphereUV = viewNormal.xy * 0.5 + 0.5;
 	float3 sphereMap_var = tex2D(inMask, inUV);
 	float4 sphereAdd = tex2D(inAdd, sphereUV);
@@ -174,20 +175,22 @@ MatcapContainer CalculateSphere(float3 inNormal, VertexOutput inI, sampler2D inA
 	Matcap.Shadow = specularShadows;
 	Matcap.UV = sphereUV;
 
-	return Matcap;	
+	return Matcap;
 }
 
 float4 CalculateColor(sampler2D inTexture, float2 inUV, float4 inColor)
 {
 	float4 baseColor = tex2D(inTexture, inUV);
-	baseColor.rgb = (baseColor.rgb*_Color.rgb);
+	baseColor.rgb = (baseColor.rgb * _Color.rgb);
 	return baseColor;
 }
 
-float3 CalculateNormal(float2 inUV, sampler2D inNormal, float3x3 inTngentTransform)
+float3 CalculateNormal(float2 inUV, sampler2D inNormal, float3x3 inTngentTransform, float inIntensity)
 {
 	float3 _BumpMap_var = UnpackNormal(tex2D(inNormal, inUV));
+	_BumpMap_var = normalize(lerp(float3(0,0,1), _BumpMap_var, inIntensity));
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, inTngentTransform));
+	//normalDirection *= tex2D(inMask, inUV);
 	return normalDirection;
 }
 #endif

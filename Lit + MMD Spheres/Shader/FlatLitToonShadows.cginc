@@ -63,11 +63,11 @@ half4 fragShadowCaster
 		if(alpha < 1)
 			clip(-1);
 
-	if(shadowMask < 1)
-		SHADOW_CASTER_FRAGMENT(i)
-	else
-		//clip(-1);
-		return _Color;
+	if(_Mode == 4)
+		if(alpha < _Cutoff)
+			clip(-1);
+
+	SHADOW_CASTER_FRAGMENT(i)
 }
 
 #endif

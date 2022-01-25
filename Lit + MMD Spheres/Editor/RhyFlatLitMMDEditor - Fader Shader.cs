@@ -29,16 +29,26 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
         }
     }
 
+    public enum RQueue
+    {
+        High,
+        Mid,
+        Low
+    }
+
     public enum BlendMode
     {
         Opaque,
         Cutout,
         Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
-        Transparent // Physically plausible transparency mode, implemented as alpha pre-multiply
+        Transparent, // Physically plausible transparency mode, implemented as alpha pre-multiply
+        Fade_Cutout
     }
 
+    MaterialProperty shaderSelect;
     MaterialProperty blendMode;
-	MaterialProperty cullMode;
+    MaterialProperty queueList;
+    MaterialProperty cullMode;
     MaterialProperty mainTexture;
     MaterialProperty opacity;
     MaterialProperty color;
@@ -63,6 +73,8 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
     MaterialProperty speedX;
     MaterialProperty speedY;
     MaterialProperty normalMap;
+    MaterialProperty normalMask;
+    MaterialProperty normalIntensity;
     MaterialProperty alphaCutoff;
     MaterialProperty specularBleed;
 	MaterialProperty fader;
@@ -74,8 +86,10 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
         { //Find Properties
+            shaderSelect = FindProperty("_Select", props);
             blendMode = FindProperty("_Mode", props);
-			cullMode = FindProperty("_Cull", props);
+            queueList = FindProperty("_Queue", props);
+            cullMode = FindProperty("_Cull", props);
             mainTexture = FindProperty("_MainTex", props);
             opacity = FindProperty("_Opacity", props);
             color = FindProperty("_Color", props);
@@ -100,6 +114,8 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
             speedX = FindProperty("_SpeedX", props);
             speedY = FindProperty("_SpeedY", props);
             normalMap = FindProperty("_BumpMap", props);
+            normalIntensity = FindProperty("_NormalIntensity", props);
+            normalMask = FindProperty("_NormalMask", props);
             alphaCutoff = FindProperty("_Cutoff", props);
             specularBleed = FindProperty("_SpecularBleed", props);
 			fader = FindProperty("_Fader", props);
@@ -111,6 +127,8 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 
         Material material = materialEditor.target as Material;
         bool ToggleEmission = false;
+        int renderValue = 0;
+        int selectValue = 0;
 
         { //Shader Properties GUI
             EditorGUIUtility.labelWidth = 0f;
@@ -118,17 +136,34 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 
             EditorGUI.BeginChangeCheck();
             {
+                selectValue = (int)shaderSelect.floatValue;
+
                 if (emissionToggle.floatValue != 1)
                     ToggleEmission = true;
                 else
                     ToggleEmission = false;
 
                 EditorGUI.showMixedValue = blendMode.hasMixedValue;
+                EditorGUI.showMixedValue = cullMode.hasMixedValue;
+                EditorGUI.showMixedValue = queueList.hasMixedValue;
+
                 var bMode = (BlendMode)blendMode.floatValue;
-				var cMode = (CullMode)cullMode.floatValue;
+                var cMode = (CullMode)cullMode.floatValue;
+                var rMode = (RQueue)queueList.floatValue;
 
                 EditorGUI.BeginChangeCheck();
                 GUILayout.Label("-General Textures-", EditorStyles.boldLabel);
+                rMode = (RQueue)EditorGUILayout.Popup("Render Queue", (int)rMode, Enum.GetNames(typeof(RQueue)));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Render Queue");
+                    queueList.floatValue = (float)rMode;
+
+                    foreach (var obj in queueList.targets)
+                    {
+                        renderValue = SetupMaterialWithRenderQueue((Material)obj, (RQueue)material.GetFloat("_Queue"));
+                    }
+                }
                 bMode = (BlendMode)EditorGUILayout.Popup("Rendering Mode", (int)bMode, Enum.GetNames(typeof(BlendMode)));
                 if (EditorGUI.EndChangeCheck())
                 {
@@ -137,7 +172,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 
                     foreach (var obj in blendMode.targets)
                     {
-                        SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"));
+                        SetupMaterialWithBlendMode((Material)obj, (BlendMode)material.GetFloat("_Mode"), selectValue, renderValue);
                     }
                 }
 				cMode = (CullMode)EditorGUILayout.Popup("Cull Mode", (int)cMode, Enum.GetNames(typeof(CullMode)));
@@ -193,6 +228,8 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
                 GUILayout.Label("-Normal Maps-", EditorStyles.boldLabel);
                 materialEditor.TexturePropertySingleLine(new GUIContent("Normal Map", "Normal Map"), normalMap);
                 materialEditor.TextureScaleOffsetProperty(normalMap);
+                materialEditor.ShaderProperty(normalIntensity, "Normal Intensity", 1);
+                materialEditor.TexturePropertySingleLine(new GUIContent("Normal Mask", "Normal Mask"), normalMask);
                 GUILayout.Space(6);
                 GUILayout.Label("-Other Effects-", EditorStyles.boldLabel);
 
@@ -224,33 +261,56 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
 
                 EditorGUILayout.Space();
             }
-            EditorGUI.EndChangeCheck();
         }
 
     }
 
-    public static void SetupMaterialWithBlendMode(Material material, BlendMode blendMode)
+    public static int SetupMaterialWithRenderQueue(Material material, RQueue render)
+    {
+        switch ((RQueue)material.GetFloat("_Queue"))
+        {
+            case RQueue.High:
+                return 5;
+            case RQueue.Mid:
+                return 0;
+            case RQueue.Low:
+                return -5;
+        }
+        return 0;
+    }
+
+    public static void SetupMaterialWithBlendMode(Material material, BlendMode blendMode, int inSelect, int inValue)
     {
         switch ((BlendMode)material.GetFloat("_Mode"))
         {
             case BlendMode.Opaque:
+                material.renderQueue = (2000 + inValue + 0);
                 material.SetOverrideTag("RenderType", "Opaque");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
                 break;
             case BlendMode.Cutout:
+                material.renderQueue = (2460 + inValue + 0);
                 material.SetOverrideTag("RenderType", "TransparentCutout");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 break;
             case BlendMode.Fade:
+                material.renderQueue = (3000 + inValue + 0);
                 material.SetOverrideTag("RenderType", "Transparent");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 break;
             case BlendMode.Transparent:
+                material.renderQueue = (3010 + inValue + 0);
                 material.SetOverrideTag("RenderType", "Transparent");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                break;
+            case BlendMode.Fade_Cutout:
+                material.renderQueue = (3020 + inValue + 0);
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
                 break;
         }

@@ -1,8 +1,9 @@
-Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
+Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Mixed Matcaps - AudioLink"
 {
 	Properties
 	{
 		_MainTex("MainTex", 2D) = "white" {}
+		_AudioLink("AudioLink Texture", 2D) = "black" {}
 		_Color("Color", Color) = (1,1,1,1)
 		_ColorMask("ColorMask", 2D) = "black" {}
 		_ColorIntensity("Intensity", Range(0, 5)) = 1.0
@@ -31,6 +32,8 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_NormalIntensity("Normal Intensity", Range(0,5)) = 1
 		_NormalMask("Normal Mask", 2D) = "White" {}
+		_NormalIntensity("Normal Intensity", Range(0,5)) = 1
+		_NormalMask("Normal Mask", 2D) = "White" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		_Opacity("Opacity", Range(1,0)) = 0
 		_SpecularBleed("Specular Bleedthrough", Range(0,1)) = 0.1
@@ -54,25 +57,28 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 	{
 		Tags
 		{
-			"Queue" = "Geometry+9"
-			"RenderType" = "Transparent"
-		}
-
+			"Queue"="Geometry+1"
+			"RenderType" = "Opaque"
+		} 
+		
 		Pass
 		{
-			Name "PRE-FORWARD"
+			Name "PRE-FORWARD" 
 			Tags { "LightMode" = "ForwardBase"}
 
 			Zwrite On
 			ZTest LEqual
-			Cull[_Cull]
+			AlphaToMask On
+			//ColorMask RGB
+			Cull [_Cull]
 			LOD 200
-			Blend[_SrcBlend][_DstBlend]
+			Blend [_SrcBlend] [_DstBlend]
 
 			CGPROGRAM
+			#include "UnityCG.cginc"
 			#include "FlatLitToonCoreMMD Extra.cginc"
 			#include "RhyShaderHelperFunction.cginc"
-			#pragma target 5.0
+			#include "AudioLink.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -81,6 +87,145 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			#pragma multi_compile_fwdbase
 			#pragma only_renderers d3d11 glcore gles
 			
+			float2 emissionUV;
+			float2 emissionMovement;
+			LightContainer Lighting;
+			MatcapContainer Matcap;
+			MatcapContainer Matcap2;
+			
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
+			{			
+				float faceSign = ( facing >= 0 ? 1 : -1 );
+			
+				float4 white = float4(1,1,1,1);
+				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
+
+				emissionUV = i.uv0;
+				emissionUV.x += _Time.x * _SpeedX;
+				emissionUV.y += _Time.x * _SpeedY;
+				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
+				
+				i.normalDir = normalize(i.normalDir);
+				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
+
+				_NormalIntensity *= tex2D(_NormalMask, i.uv0);
+				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform, _NormalIntensity);
+				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);
+				float finalAlpha = baseColor.a;
+				
+				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+				
+				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
+
+				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
+				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
+				float3 emissive = _EmissionMap_var.rgb;
+
+				if (AudioLinkIsAvailable())
+				{ 
+					float pulseWave = sqrt(pow(i.uv0.x - .5, 2) + pow(i.uv0.y - .5, 2));
+					float4 ALColor = AudioLinkLerp(ALPASS_CCSTRIP).rgba;
+					float3 redEmissionMask = emissionMask_var.rrr;
+					float3 blueEmissionMask = emissionMask_var.bbb;
+					float3 greenEmissionMask = emissionMask_var.ggg;
+					redEmissionMask *= AudioLinkData(ALPASS_AUDIOLINK).r;
+					blueEmissionMask.rgb *= AudioLinkLerp(ALPASS_AUDIOLINK + float2(0.0 + (126.0 * pulseWave), 1)).r * baseColor;
+					greenEmissionMask.rgb *= AudioLinkData(ALPASS_AUDIOLINK + uint2(0, 3)).r * AudioLinkLerp(ALPASS_CCSTRIP+ float2(64.0,0.0)).rgb;
+					if (_EmissionToggle == 1)
+						emissive.rgb *= _EmissionColor;
+					else
+						emissive.rgb *= _EmissionAltColor;
+					emissive.rgb *= (redEmissionMask.rgb + blueEmissionMask.rgb + greenEmissionMask.rgb);
+					emissive.rgb *= _EmissionIntensity;
+				}
+				else
+				{
+					if(_EmissionToggle == 1)
+						emissive.rgb *= _EmissionColor;
+					else
+						emissive.rgb *= _EmissionAltColor;
+		
+					emissive.rgb *= emissionMask_var.rgb;
+					emissive.rgb *= _EmissionIntensity;
+				}
+				
+				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
+				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.57);
+				float3 toonTexColor = tex2D(_ToonTex, tempValue);
+				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
+				float4 shadowMask_var = tex2D(_ShadowMask, TRANSFORM_TEX(i.uv0, _ShadowMask));
+
+				tempValue = (tempValue + shadowMask_var.rgb);
+				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
+
+				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
+				if(light_Env == 1)
+					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
+				else
+					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity);
+
+				Matcap.Mul.rgb *= _SphereMulIntensity;
+				
+				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
+				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
+
+				if(light_Env == 1)
+					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
+				else
+					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
+
+				if(_Mode == 1)
+				{
+					if(finalAlpha - _Cutoff < 0)
+						clip (finalAlpha - _Cutoff);
+					else
+						finalAlpha = 1;
+				}
+				if(_Mode == 3)
+				{
+					finalAlpha = _Opacity;
+					_ColorIntensity *= _Opacity;
+					Matcap.Add *= _Opacity;
+				}
+				
+
+				float3 finalColor = emissive + ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
+
+				if(light_Env != 1)
+					finalColor = emissive + ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
+
+				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
+				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
+				return finalRGBA;
+			}
+			ENDCG
+		}
+
+		Pass
+		{
+			Name "FORWARD"
+			Tags { "LightMode" = "ForwardBase"}
+
+			Blend [_SrcBlend] [_DstBlend]
+			ZWrite On
+			ZTest LEqual
+			LOD 200
+			Cull [_Cull]
+						
+			CGPROGRAM
+			#include "UnityCG.cginc"
+			#include "FlatLitToonCoreMMD Extra.cginc"
+			#include "RhyShaderHelperFunction.cginc"
+			#include "AudioLink.cginc"
+			#pragma vertex vert
+			#pragma geometry geom
+			#pragma fragment frag
+
+			#pragma multi_compile_fog
+			#pragma multi_compile_fwdbase
+			#pragma only_renderers d3d11 glcore gles
+
 			float2 emissionUV;
 			float2 emissionMovement;
 			LightContainer Lighting;
@@ -106,24 +251,44 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform, _NormalIntensity);
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);	
 				float finalAlpha = baseColor.a;
-
-				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-				//attenuation = FadeShadows(attenuation, i.posWorld.xyz);
 				
+				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+				attenuation = FadeShadows(attenuation, i.posWorld.xyz);
+
 				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
 
 				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
 				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
 				float3 emissive = _EmissionMap_var.rgb;
 
-				if(_EmissionToggle == 1)
-					emissive.rgb *= _EmissionColor;
+				if (AudioLinkIsAvailable())
+				{ 
+					float pulseWave = sqrt(pow(i.uv0.x - .5, 2) + pow(i.uv0.y - .5, 2));
+					float4 ALColor = AudioLinkLerp(ALPASS_CCSTRIP).rgba;
+					float3 redEmissionMask = emissionMask_var.rrr;
+					float3 blueEmissionMask = emissionMask_var.bbb;
+					float3 greenEmissionMask = emissionMask_var.ggg;
+					redEmissionMask *= AudioLinkData(ALPASS_AUDIOLINK).r;
+					blueEmissionMask.rgb *= AudioLinkLerp(ALPASS_AUDIOLINK + float2(0.0 + (126.0 * pulseWave), 1)).r * baseColor;
+					greenEmissionMask.rgb *= AudioLinkData(ALPASS_AUDIOLINK + uint2(0, 3)).r * AudioLinkLerp(ALPASS_CCSTRIP+ float2(64.0,0.0)).rgb;
+					if (_EmissionToggle == 1)
+						emissive.rgb *= _EmissionColor;
+					else
+						emissive.rgb *= _EmissionAltColor;
+					emissive.rgb *= (redEmissionMask.rgb + blueEmissionMask.rgb + greenEmissionMask.rgb);
+					emissive.rgb *= _EmissionIntensity;
+				}
 				else
-					emissive.rgb *= _EmissionAltColor;
+				{
+					if(_EmissionToggle == 1)
+						emissive.rgb *= _EmissionColor;
+					else
+						emissive.rgb *= _EmissionAltColor;
+		
+					emissive.rgb *= emissionMask_var.rgb;
+					emissive.rgb *= _EmissionIntensity;
+				}
 
-				emissive.rgb *= emissionMask_var.rgb;
-				emissive.rgb *= _EmissionIntensity;
-				
 				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
 				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.57);
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
@@ -141,7 +306,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity);
 
 				Matcap.Mul.rgb *= _SphereMulIntensity;
-
+				
 				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
 				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
 
@@ -149,8 +314,6 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
 				else
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
-
-				sphereSubAdd.rgb *= Lighting.lightCol;
 
 				if(_Mode == 1)
 				{
@@ -164,9 +327,9 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
-					Matcap.Mul *= _Opacity;
 				}
 				
+
 				float3 finalColor = emissive + ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
 				if(light_Env != 1)
@@ -177,134 +340,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 				return finalRGBA;
 			}
 			ENDCG
-		}
-
-		Pass
-		{
-			Name "FORWARD"
-			Tags { "LightMode" = "ForwardBase"}
-
-			Blend[_SrcBlend][_DstBlend]
-			ZWrite On
-			ZTest LEqual
-			LOD 200
-			Cull[_Cull]
-			//ColorMask RGB
-
-			CGPROGRAM
-			#include "UnityCG.cginc"
-			#include "FlatLitToonCoreMMD Extra.cginc"
-			#include "RhyShaderHelperFunction.cginc"
-			#pragma target 5.0
-			#pragma vertex vert
-			#pragma geometry geom
-			#pragma fragment frag
-
-			#pragma multi_compile_fog
-			#pragma multi_compile_fwdbase
-			#pragma only_renderers d3d11 glcore gles
-			//#pragma multi_compile_instancing
-			//#pragma fragmentoption ARB_precision_hint_fastest
-
-			float2 emissionUV;
-			float2 emissionMovement;
-			LightContainer Lighting;
-			MatcapContainer Matcap;
-			MatcapContainer Matcap2;
-			
-			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
-			{			
-				float faceSign = ( facing >= 0 ? 1 : -1 );
-			
-				float4 white = float4(1,1,1,1);
-				float4 black = float4(0,0,0,0);
-				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
-
-				emissionUV = i.uv0;
-				emissionUV.x += _Time.x * _SpeedX;
-				emissionUV.y += _Time.x * _SpeedY;
-				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
-				
-				i.normalDir = normalize(i.normalDir);
-				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-
-				_NormalIntensity *= tex2D(_NormalMask, i.uv0);
-				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform, _NormalIntensity);
-				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);			
-				
-				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
-				//attenuation = FadeShadows(attenuation, i.posWorld.xyz);
-
-				Lighting = CalculateLight(_WorldSpaceLightPos0, _LightColor0, normalDirection, attenuation, _ClampMin, _ClampMax);
-
-				float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _EmissionMap));
-				float4 emissionMask_var = tex2D(_EmissionMask,TRANSFORM_TEX(emissionUV, _EmissionMask));
-				float3 emissive = _EmissionMap_var.rgb;
-
-				if(_EmissionToggle == 1)
-					emissive.rgb *= _EmissionColor;
-				else
-					emissive.rgb *= _EmissionAltColor;
-
-				emissive.rgb *= emissionMask_var.rgb;
-				emissive.rgb *= _EmissionIntensity;
-				
-				float rampValue = smoothstep(0, Lighting.bw_lightDif, 0 - dot(ShadeSH9(float4(0, 0, 0, 1)), grayscale_vector));
-				float tempValue = (0.5 * dot(normalDirection, Lighting.lightDir) + 0.57);
-				float3 toonTexColor = tex2D(_ToonTex, tempValue);
-				float3 shadowTexColor = tex2D(_ShadowTex, rampValue);
-				float4 shadowMask_var = tex2D(_ShadowMask, TRANSFORM_TEX(i.uv0, _ShadowMask));
-
-				tempValue = (tempValue + shadowMask_var.rgb);
-				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
-
-				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
-
-				if(light_Env == 1)
-					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity) * Matcap.Shadow;
-				else
-					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity);
-
-				Matcap.Mul.rgb *= _SphereMulIntensity;
-
-				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
-				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
-
-				if(light_Env == 1)
-					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
-				else
-					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
-
-				sphereSubAdd.rgb *= Lighting.lightCol;
-
-				float finalAlpha = baseColor.a;
-
-				if(_Mode == 1)
-				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
-					else
-						finalAlpha = 1;
-				}
-				if(_Mode == 3)
-				{
-					finalAlpha = _Opacity;
-					_ColorIntensity *= _Opacity;
-					Matcap.Add *= _Opacity;
-					Matcap.Mul *= _Opacity;
-				}
-				
-				float3 finalColor = emissive + ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
-
-				if(light_Env != 1)
-					finalColor = emissive + ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * Lighting.lightCol;
-
-				fixed4 finalRGBA = fixed4(finalColor, finalAlpha);						
-				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
-				return finalRGBA;
-			}
-			ENDCG
-		}		
+		}			
 		
 		Pass
 		{
@@ -313,14 +349,13 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			{ 
 				"LightMode" = "ForwardAdd"
 			}
-
-			Blend[_SrcBlend] One
+			Blend [_SrcBlend] One
 			ZWrite On
 			ZTest LEqual
 			LOD 200
-			Cull[_Cull]
-			Fog { Color(0,0,0,0) } // in additive pass fog should be black
-
+			Cull [_Cull]
+			Fog { Color (0,0,0,0) } // in additive pass fog should be black
+			
 
 			CGPROGRAM
 			#include "FlatLitToonCoreMMD Extra.cginc"
@@ -336,21 +371,20 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			LightContainer Lighting;
 			MatcapContainer Matcap;
 			MatcapContainer Matcap2;
-
-			float4 frag(VertexOutput i, float facing : VFACE) : COLOR
-			{
+			
+			float4 frag(VertexOutput i, float facing : VFACE) : COLOR 
+			{			
 				float faceSign = ( facing >= 0 ? 1 : -1 );
 				float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 				
 				float4 white = float4(1,1,1,1);
-				float4 black = float4(0,0,0,0);
 				float light_Env = float(any(_WorldSpaceLightPos0.xyz));
 
 				i.normalDir = normalize(i.normalDir);
 				float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 
-				_NormalIntensity *= tex2D(_NormalMask, i.uv0);
 				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform, _NormalIntensity);
+				normalDirection *= tex2D(_NormalMask, i.uv0).r;
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);			
 				
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -375,7 +409,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					Matcap.Add.rgb *= (Matcap.Mask * _SphereAddIntensity);
 
 				Matcap.Mul.rgb *= _SphereMulIntensity;
-
+				
 				float3 sphereSubMap_var = tex2D(_SphereSubMap, TRANSFORM_TEX(i.uv0, _SphereSubMap));
 				float4 sphereSubAdd = tex2D(_SphereAddSubTex, Matcap.UV);
 
@@ -383,9 +417,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity) * Matcap.Shadow;
 				else
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
-
-				sphereSubAdd.rgb *= Lighting.lightCol;
-
+				
 				float finalAlpha = baseColor.a;
 
 				if(_Mode == 1)
@@ -400,7 +432,6 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
-					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
@@ -439,6 +470,6 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			ENDCG
 		}
 	}
-	Fallback "Toon/Lit Cutout (Double)"
-	CustomEditor "RhyFlatLitMMDEditorFaderShader"
+	Fallback "Legacy Shaders/Diffuse"
+	CustomEditor "RhyFlatLitMMDEditorFaderShaderAudioLink"
 }
