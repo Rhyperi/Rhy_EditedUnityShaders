@@ -168,10 +168,32 @@ Shader "Rhy Custom Shaders/Toon + Spheres/2x Emissions"
 				
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
-					clip (finalAlpha - _Cutoff);
-				if(_Mode == 3)
-					finalAlpha -= _Opacity;
+				if (_Mode == 1)
+				{
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
+					else
+						finalAlpha = 1;
+				}
+				else if (_Mode == 4)
+				{
+					finalAlpha = _Opacity;
+					_ColorIntensity *= _Opacity;
+					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
+					toonTexColor *= _Opacity;
+				}
+				else if (_Mode == 5)
+				{
+					if (finalAlpha - _Cutoff < 0)
+					{
+						clip(finalAlpha - _Cutoff);
+						_ColorIntensity *= 0;
+						Matcap.Add *= 0;
+						Matcap.Mul *= 0;
+						toonTexColor *= 0;
+					}
+				}
 				
 				float3 finalColor = (emissive + emissive2) + (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
 
@@ -254,10 +276,32 @@ Shader "Rhy Custom Shaders/Toon + Spheres/2x Emissions"
 				
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
-					clip (finalAlpha - _Cutoff);
-				if(_Mode == 3)
-					finalAlpha -= _Opacity;
+				if (_Mode == 1)
+				{
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
+					else
+						finalAlpha = 1;
+				}
+				else if (_Mode == 4)
+				{
+					finalAlpha = _Opacity;
+					_ColorIntensity *= _Opacity;
+					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
+					toonTexColor *= _Opacity;
+				}
+				else if (_Mode == 5)
+				{
+					if (finalAlpha - _Cutoff < 0)
+					{
+						clip(finalAlpha - _Cutoff);
+						_ColorIntensity *= 0;
+						Matcap.Add *= 0;
+						Matcap.Mul *= 0;
+						toonTexColor *= 0;
+					}
+				}
 				
 				float3 finalColor = (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
 

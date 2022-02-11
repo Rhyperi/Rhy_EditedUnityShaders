@@ -41,6 +41,7 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
         Opaque,
         Cutout,
         Fade,   // Old school alpha-blending mode, fresnel does not affect amount of transparency
+        ShadowFade, //Fade, but lower render queue to let it accept shadows cast upon it
         Transparent, // Physically plausible transparency mode, implemented as alpha pre-multiply
         Fade_Cutout
     }
@@ -297,6 +298,12 @@ public class RhyFlatLitMMDEditorFaderShader : ShaderGUI
                 break;
             case BlendMode.Fade:
                 material.renderQueue = (3000 + inValue + 0);
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                break;
+            case BlendMode.ShadowFade:
+                material.renderQueue = (2500 + inValue + 0);
                 material.SetOverrideTag("RenderType", "Transparent");
                 material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
                 material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);

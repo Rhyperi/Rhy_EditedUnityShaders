@@ -144,7 +144,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Lit Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if(_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
@@ -152,7 +152,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Lit Transparency"
 					Matcap.Mul *= _Opacity;
 					toonTexColor *= _Opacity;
 				}
-				if(_Mode == 4)
+				if(_Mode == 5)
 				{
 					if(finalAlpha - _Cutoff < 0)
 					{
@@ -270,17 +270,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Lit Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
+					toonTexColor *= _Opacity;
 				}
-				if(_Mode == 4)
+				if (_Mode == 5)
 				{
-					if(finalAlpha - _Cutoff < 0)
+					if (finalAlpha - _Cutoff < 0)
 					{
-						clip (finalAlpha - _Cutoff);
+						clip(finalAlpha - _Cutoff);
 						_ColorIntensity *= 0;
 						Matcap.Add *= 0;
 						Matcap.Mul *= 0;
@@ -378,17 +380,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Lit Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
+					toonTexColor *= _Opacity;
 				}
-				if(_Mode == 4)
+				if (_Mode == 5)
 				{
-					if(finalAlpha - _Cutoff < 0)
+					if (finalAlpha - _Cutoff < 0)
 					{
-						clip (finalAlpha - _Cutoff);
+						clip(finalAlpha - _Cutoff);
 						_ColorIntensity *= 0;
 						Matcap.Add *= 0;
 						Matcap.Mul *= 0;

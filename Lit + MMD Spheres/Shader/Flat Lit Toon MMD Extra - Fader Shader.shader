@@ -66,8 +66,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 
 			Zwrite On
 			ZTest LEqual
-			AlphaToMask On
-			//ColorMask RGB
+			//AlphaToMask On
 			Cull [_Cull]
 			LOD 200
 			Blend [_SrcBlend] [_DstBlend]
@@ -133,7 +132,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 				float4 shadowMask_var = tex2D(_ShadowMask, TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
 				tempValue = (tempValue + shadowMask_var.rgb);
-				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
+				Lighting.indirectLit += ((shadowTexColor + (.5 * shadowMask_var.rgb)) * Lighting.lightCol);
 
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 				
@@ -156,18 +155,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 
 				
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 
@@ -255,7 +255,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 				float4 shadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _ShadowMask));
 				
 				tempValue = (tempValue + shadowMask_var.rgb);
-				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
+				Lighting.indirectLit += ((shadowTexColor + (.5 * shadowMask_var.rgb)) * Lighting.lightCol);
 
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
@@ -277,18 +277,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 
 				
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 
@@ -382,18 +383,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps"
 				
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));

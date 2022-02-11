@@ -65,6 +65,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 
 			Zwrite On
 			ZTest LEqual
+			//AlphaToMask On
 			Cull[_Cull]
 			LOD 200
 			Blend[_SrcBlend][_DstBlend]
@@ -105,7 +106,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 				_NormalIntensity *= tex2D(_NormalMask, i.uv0);
 				float3 normalDirection = CalculateNormal(TRANSFORM_TEX(i.uv0, _BumpMap), _BumpMap, tangentTransform, _NormalIntensity);
 				float4 baseColor = CalculateColor(_MainTex, TRANSFORM_TEX(i.uv0, _MainTex), _Color);	
-				float finalAlpha = baseColor.a;
+				
 
 				UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 				//attenuation = FadeShadows(attenuation, i.posWorld.xyz);
@@ -152,6 +153,8 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 
 				sphereSubAdd.rgb *= Lighting.lightCol;
 
+				float finalAlpha = baseColor.a;
+
 				if(_Mode == 1)
 				{
 					if(finalAlpha - _Cutoff < 0)
@@ -159,7 +162,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
@@ -189,7 +192,6 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			ZTest LEqual
 			LOD 200
 			Cull[_Cull]
-			//ColorMask RGB
 
 			CGPROGRAM
 			#include "UnityCG.cginc"
@@ -203,8 +205,6 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 			#pragma multi_compile_fog
 			#pragma multi_compile_fwdbase
 			#pragma only_renderers d3d11 glcore gles
-			//#pragma multi_compile_instancing
-			//#pragma fragmentoption ARB_precision_hint_fastest
 
 			float2 emissionUV;
 			float2 emissionMovement;
@@ -286,7 +286,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
@@ -395,7 +395,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Mixed Matcaps Transparency"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;

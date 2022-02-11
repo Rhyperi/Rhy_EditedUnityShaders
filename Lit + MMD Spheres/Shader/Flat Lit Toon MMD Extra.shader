@@ -137,7 +137,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Basic"
 				tempValue = (tempValue + shadowMask_var.rgb);
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 
-				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
+				Lighting.indirectLit += ((shadowTexColor + (.5 * shadowMask_var.rgb)) * Lighting.lightCol);
 
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
@@ -157,11 +157,12 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Basic"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = emissive + (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
@@ -233,7 +234,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Basic"
 				tempValue = (tempValue + shadowMask_var.rgb);
 				float3 toonTexColor = tex2D(_ToonTex, tempValue);
 				
-				Lighting.indirectLit += ((shadowTexColor + (.75 * shadowMask_var.rgb)) * Lighting.lightCol);
+				Lighting.indirectLit += ((shadowTexColor + (.5 * shadowMask_var.rgb)) * Lighting.lightCol);
 				
 				Matcap = CalculateSphere(normalDirection, i, _SphereAddTex, _SphereMulTex, _SphereMap, TRANSFORM_TEX(i.uv0, _SphereMap), _SpecularBleed, faceSign, attenuation);
 
@@ -253,11 +254,12 @@ Shader "Rhy Custom Shaders/Toon + Spheres/Basic"
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));

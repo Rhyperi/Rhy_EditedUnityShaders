@@ -68,7 +68,7 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Mixed Mat
 
 			Zwrite On
 			ZTest LEqual
-			AlphaToMask On
+			//AlphaToMask On
 			//ColorMask RGB
 			Cull [_Cull]
 			LOD 200
@@ -175,18 +175,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Mixed Mat
 				else
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 
@@ -315,18 +316,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Mixed Mat
 				else
 					sphereSubAdd.rgb *= (sphereSubMap_var * _SphereAddSubIntensity);
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 
@@ -420,18 +422,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Mixed Mat
 				
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = ((Matcap.Add + sphereSubAdd) + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));

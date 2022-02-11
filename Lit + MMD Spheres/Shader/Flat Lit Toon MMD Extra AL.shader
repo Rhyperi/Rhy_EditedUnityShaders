@@ -193,18 +193,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Basic"
 
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = emissive + (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(Lighting.indirectLit, Lighting.directLit, attenuation));
@@ -295,18 +296,19 @@ Shader "Rhy Custom Shaders/Toon + Spheres/AudioLink Supported Variants/Basic"
 
 				float finalAlpha = baseColor.a;
 
-				if(_Mode == 1)
+				if (_Mode == 1)
 				{
-					if(finalAlpha - _Cutoff < 0)
-						clip (finalAlpha - _Cutoff);
+					if (finalAlpha - _Cutoff < 0)
+						clip(finalAlpha - _Cutoff);
 					else
 						finalAlpha = 1;
 				}
-				if(_Mode == 3)
+				if (_Mode == 4)
 				{
 					finalAlpha = _Opacity;
 					_ColorIntensity *= _Opacity;
 					Matcap.Add *= _Opacity;
+					Matcap.Mul *= _Opacity;
 				}
 				
 				float3 finalColor = (Matcap.Add + (_ColorIntensity * (baseColor.rgb * toonTexColor) * Matcap.Mul)) * (lerp(0, Lighting.directLit, attenuation));
